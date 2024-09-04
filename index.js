@@ -1,13 +1,13 @@
 const express = require("express");
 const cors = require("cors");
-
 require("dotenv").config();
 const mongoose = require("mongoose");
-
 const app = express();
 const PORT = process.env.PORT || 8888;
 const mongodb = process.env.MONGODB_URI;
 const dbURI = process.env.MONGODB_URI;
+const movieGenreRoute = require("./routes/movieGenreRoute");
+const movieRoute = require("./routes/movieRoute");
 
 mongoose
   .connect(dbURI)
@@ -25,6 +25,9 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );
+//routes
+app.use("/v1/movie-genre", movieGenreRoute);
+app.use("/v1/movie", movieRoute);
 
 app.get("/", (req, res) => {
   return res.send("Hello World");

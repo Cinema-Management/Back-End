@@ -5,6 +5,7 @@ const MovieGenreSchema = new Schema(
   {
     code: {
       type: String,
+      unique: true,
       required: true,
     },
     name: {
