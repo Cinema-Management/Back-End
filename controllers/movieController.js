@@ -48,7 +48,12 @@ const movieController = {
   },
   getAllMovie: async (req, res) => {
     try {
-      const movie = await Movie.find();
+      const movie = await Movie.find().populate({
+        path: "genres_code",
+        model: "MovieGenre",
+        select: "code name",
+        foreignField: "code",
+      });
       return res.status(200).send(movie);
     } catch (error) {
       return res.status(500).send(error);

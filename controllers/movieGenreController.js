@@ -1,4 +1,5 @@
 const MovieGenre = require("../models/MovieGenre");
+
 const movieGenreController = {
   addMovieGenre: async (req, res) => {
     try {
@@ -19,6 +20,7 @@ const movieGenreController = {
       return res.status(400).send(error);
     }
   },
+
   getAllMovieGenres: async (req, res) => {
     try {
       const movieGenres = await MovieGenre.find();
@@ -28,4 +30,5 @@ const movieGenreController = {
     }
   },
 };
+
 module.exports = movieGenreController;
