@@ -8,7 +8,8 @@ const mongodb = process.env.MONGODB_URI;
 const dbURI = process.env.MONGODB_URI;
 const movieGenreRoute = require("./routes/movieGenreRoute");
 const movieRoute = require("./routes/movieRoute");
-
+const userRoute = require("./routes/userRoute");
+const authRoute = require("./routes/authRoute");
 mongoose
   .connect(dbURI)
   .then(() => {
@@ -28,6 +29,8 @@ app.use(
 //routes
 app.use("/v1/movie-genre", movieGenreRoute);
 app.use("/v1/movie", movieRoute);
+app.use("/v1/user", userRoute);
+app.use("/v1/auth", authRoute);
 
 app.get("/", (req, res) => {
   return res.send("Hello World");
