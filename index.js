@@ -10,6 +10,9 @@ const movieGenreRoute = require("./routes/movieGenreRoute");
 const movieRoute = require("./routes/movieRoute");
 const userRoute = require("./routes/userRoute");
 const authRoute = require("./routes/authRoute");
+const cinemaRoute = require("./routes/cinemaRoute");
+const roomTypeRoute = require("./routes/roomTypeRoute");
+const roomRoute = require("./routes/roomRoute");
 mongoose
   .connect(dbURI)
   .then(() => {
@@ -31,6 +34,9 @@ app.use("/v1/movie-genre", movieGenreRoute);
 app.use("/v1/movie", movieRoute);
 app.use("/v1/user", userRoute);
 app.use("/v1/auth", authRoute);
+app.use("/v1/cinema", cinemaRoute);
+app.use("/v1/room-type", roomTypeRoute);
+app.use("/v1/room", roomRoute);
 
 app.get("/", (req, res) => {
   return res.send("Hello World");
