@@ -41,7 +41,7 @@ const UserSchema = new Schema(
     },
     type: {
       // 0: user, 1: staff
-      type: int,
+      type: Number,
       required: false,
     },
     isAdmin: {
