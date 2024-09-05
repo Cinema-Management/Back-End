@@ -11,7 +11,7 @@ const RoomSchema = new Schema(
       type: String,
       ref: "RoomType",
     },
-    cinema_code: {
+    cinemaCode: {
       type: String,
       ref: "Cinema",
     },
@@ -19,10 +19,18 @@ const RoomSchema = new Schema(
       type: String,
       required: true,
     },
-
-    capacity: {
+    quantityColum: {
       type: Number,
       required: true,
+      default: 1,
+    },
+    quantityRow: {
+      type: Number,
+      required: true,
+      default: 1,
+    },
+    capacity: {
+      type: Number,
     },
     status: {
       type: Number,
@@ -31,6 +39,11 @@ const RoomSchema = new Schema(
   },
   { timestamps: true }
 );
+
+RoomSchema.pre("save", function (next) {
+  this.capacity = this.quantityColum * this.quantityRow;
+  next();
+});
 
 const Room = mongoose.model("Room", RoomSchema);
 module.exports = Room;
