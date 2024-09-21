@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const mongoose = require("mongoose");
-const AutoIncrement = require("mongoose-sequence")(mongoose);
 const app = express();
 const PORT = process.env.PORT || 8888;
 const mongodb = process.env.MONGODB_URI;
@@ -31,13 +30,13 @@ app.use(
   })
 );
 //routes
-app.use("/v1/movie-genre", movieGenreRoute);
-app.use("/v1/movie", movieRoute);
-app.use("/v1/user", userRoute);
-app.use("/v1/auth", authRoute);
-app.use("/v1/cinema", cinemaRoute);
-app.use("/v1/room-type", roomTypeRoute);
-app.use("/v1/room", roomRoute);
+app.use("/api/movie-genre", movieGenreRoute);
+app.use("/api/movie", movieRoute);
+app.use("/api/user", userRoute);
+app.use("/api/auth", authRoute);
+app.use("/api/cinema", cinemaRoute);
+app.use("/api/room-type", roomTypeRoute);
+app.use("/api/room", roomRoute);
 
 app.get("/", (req, res) => {
   return res.send("Hello World");
