@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const mongoose = require("mongoose");
+const AutoIncrement = require("mongoose-sequence")(mongoose);
 const app = express();
 const PORT = process.env.PORT || 8888;
 const mongodb = process.env.MONGODB_URI;
