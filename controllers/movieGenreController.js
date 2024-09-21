@@ -5,6 +5,13 @@ const movieGenreController = {
     try {
       const { name } = req.body;
 
+      const existingGenre = await MovieGenre.findOne({ name });
+      if (existingGenre) {
+        return res
+          .status(400)
+          .send({ message: "Movie genre name already exists" });
+      }
+
       const lastMovieGenre = await MovieGenre.findOne().sort({ code: -1 });
 
       let newCode = "MG01";
@@ -23,7 +30,7 @@ const movieGenreController = {
 
   getAllMovieGenres: async (req, res) => {
     try {
-      const movieGenres = await MovieGenre.find();
+      const movieGenres = await MovieGenre.find().select("-_id");
       return res.status(200).send(movieGenres);
     } catch (error) {
       return res.status(500).send(error);
