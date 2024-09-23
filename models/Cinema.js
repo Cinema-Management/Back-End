@@ -7,11 +7,13 @@ const CinemaSchema = new Schema(
   {
     code: { type: String, required: true },
     name: { type: String, required: true },
-    address: { type: String, required: true },
+    hierarchyValueCode: { type: String, ref: "HierarchyValue" },
     status: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
+
+// Add plugins
 CinemaSchema.plugin(AutoIncrement, { inc_field: "cinemaId" });
 
 CinemaSchema.plugin(mongooseDelete, {

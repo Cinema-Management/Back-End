@@ -1,5 +1,4 @@
 const HierarchyValue = require("../models/HierarchyValue");
-const { getAll } = require("./hierarchyStructureController");
 
 function removeVietnameseTones(str) {
   str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
@@ -109,7 +108,7 @@ const hierarchyValueController = {
       return res.status(500).send(error);
     }
   },
-  getAllByCode: async (req, res) => {
+  getFullAddressByCode: async (req, res) => {
     try {
       const { code } = req.params;
 

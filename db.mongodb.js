@@ -297,8 +297,8 @@ db.hierarchy_values.insertMany([
     __v: 0,
   },
   {
-    code: "HCM_Q12_PTX_9ADTX",
-    name: "13A Đường Thạnh Xuân",
+    code: "HCM_Q12_PTX_5DTX13",
+    name: "5 Đường Thạnh Xuân 13",
     parentCode: "HCM_Q12_PTX",
     level: 3,
     hierarchyStructureCode: "PHANCAP01",
@@ -306,6 +306,46 @@ db.hierarchy_values.insertMany([
     createdAt: new Date(),
     updatedAt: new Date(),
     hierarchyValueId: 4,
+    __v: 0,
+  },
+
+  {
+    code: "HCM_Q12_PTX_97DTX24",
+    name: "97 Đường Thạnh Xuân 24",
+    parentCode: "HCM_Q12_PTX",
+    level: 3,
+    hierarchyStructureCode: "PHANCAP01",
+    deleted: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    hierarchyValueId: 5,
+    __v: 0,
+  },
+]);
+
+db.createCollection("cinemas");
+db.cinemas.insertMany([
+  {
+    code: "RAP01",
+    name: "Rạp Thạnh Xuân 13",
+    hierarchyValueCode: "HCM_Q12_PTX_5DTX13",
+    status: 0,
+    deleted: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    cinemaId: 1,
+    __v: 0,
+  },
+
+  {
+    code: "RAP02",
+    name: "Rạp Thạnh Xuân 13",
+    hierarchyValueCode: "HCM_Q12_PTX_97DTX24",
+    status: 0,
+    deleted: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    cinemaId: 2,
     __v: 0,
   },
 ]);
@@ -325,6 +365,9 @@ const hierarchyStructuresMax =
 const hierarchyValueMax =
   db.hierarchy_structures.find().sort({ hierarchyValueId: -1 }).limit(1).next()
     ?.hierarchyValueId || 0;
+
+const cinemaMax =
+  db.cinemas.find().sort({ cinemaId: -1 }).limit(1).next()?.cinemaId || 0;
 
 db.counters.updateOne(
   { id: "movieGenreId" },
@@ -347,5 +390,10 @@ db.counters.updateOne(
 db.counters.updateOne(
   { id: "hierarchyValueId" },
   { $set: { seq: hierarchyStructuresMax } },
+  { upsert: true }
+);
+db.counters.updateOne(
+  { id: "cinemaId" },
+  { $set: { seq: cinemaMax } },
   { upsert: true }
 );
