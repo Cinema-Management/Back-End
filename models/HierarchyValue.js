@@ -5,7 +5,7 @@ const AutoIncrement = require("mongoose-sequence")(mongoose);
 
 const HierarchyValueSchema = new Schema(
   {
-    code: { type: String, unique: true, required: true },
+    code: { type: String, required: true },
     name: { type: String, required: true },
     parentCode: { type: String, ref: "HierarchyValue", default: null },
     level: { type: Number, required: true },

@@ -5,7 +5,6 @@ const hierarchyStructureController = {
     try {
       const { name } = req.body;
 
-      // Kiểm tra xem tên cấu trúc phân cấp đã tồn tại chưa
       const existingName = await HierarchyStructure.findOne({ name });
       if (existingName) {
         return res
