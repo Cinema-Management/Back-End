@@ -13,26 +13,22 @@ const movieGenreController = {
           .send({ message: "Movie genre name already exists" });
       }
 
-      // Tìm thể loại phim cuối cùng theo movieGenreId
       const lastMovieGenre = await MovieGenre.findOne().sort({
         movieGenreId: -1,
       });
 
-      let newCode = "TLP01"; // Giá trị mặc định cho mục đầu tiên
+      let newCode = "TLP01";
       if (lastMovieGenre) {
         const lastCodeNumber = parseInt(lastMovieGenre.code.substring(3));
 
-        // Tăng số thứ tự
         const nextCodeNumber = lastCodeNumber + 1;
 
-        // Tạo mã mới với định dạng
         newCode =
           nextCodeNumber < 10
-            ? `TLP0${nextCodeNumber}` // Nếu số nhỏ hơn 10, thêm 0 vào trước
-            : `TPL${nextCodeNumber}`; // Nếu số lớn hơn hoặc bằng 10, giữ nguyên
+            ? `TLP0${nextCodeNumber}`
+            : `TPL${nextCodeNumber}`;
       }
 
-      // Tạo thể loại phim mới
       const movieGenre = new MovieGenre({ code: newCode, name });
       await movieGenre.save();
 

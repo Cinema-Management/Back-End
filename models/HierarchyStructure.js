@@ -9,6 +9,7 @@ const HierarchyStructureSchema = new Schema(
   },
   {
     timestamps: true,
+    collection: "hierarchy_structures",
   }
 );
 
