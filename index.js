@@ -13,6 +13,8 @@ const authRoute = require("./routes/authRoute");
 const cinemaRoute = require("./routes/cinemaRoute");
 const roomTypeRoute = require("./routes/roomTypeRoute");
 const roomRoute = require("./routes/roomRoute");
+const hierarchyStructureRoute = require("./routes/hierarchyStructureRoute");
+
 mongoose
   .connect(dbURI)
   .then(() => {
@@ -37,6 +39,7 @@ app.use("/api/auth", authRoute);
 app.use("/api/cinema", cinemaRoute);
 app.use("/api/room-type", roomTypeRoute);
 app.use("/api/room", roomRoute);
+app.use("/api/hierarchy-structure", hierarchyStructureRoute);
 
 app.get("/", (req, res) => {
   return res.send("Hello World");
