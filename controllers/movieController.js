@@ -40,18 +40,16 @@ const movieController = {
         movieId: -1,
       });
 
-      let newCode = "PHIM01"; // Giá trị mặc định cho mục đầu tiên
+      let newCode = "PHIM01";
       if (lastMovieGenre) {
         const lastCodeNumber = parseInt(lastMovieGenre.code.substring(4));
 
-        // Tăng số thứ tự
         const nextCodeNumber = lastCodeNumber + 1;
 
-        // Tạo mã mới với định dạng
         newCode =
           nextCodeNumber < 10
-            ? `PHIM0${nextCodeNumber}` // Nếu số nhỏ hơn 10, thêm 0 vào trước
-            : `PHIM${nextCodeNumber}`; // Nếu số lớn hơn hoặc bằng 10, giữ nguyên
+            ? `PHIM0${nextCodeNumber}`
+            : `PHIM${nextCodeNumber}`;
       }
 
       const movie = new Movie({
@@ -133,7 +131,6 @@ const movieController = {
         }
       }
 
-      // Cập nhật thông tin phim
       movie.name = name || movie.name;
       movie.movieGenreCode = movieGenreCode || movie.movieGenreCode;
       movie.image = image || movie.image;
