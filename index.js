@@ -13,6 +13,9 @@ const authRoute = require("./routes/authRoute");
 const cinemaRoute = require("./routes/cinemaRoute");
 const roomTypeRoute = require("./routes/roomTypeRoute");
 const roomRoute = require("./routes/roomRoute");
+const hierarchyStructureRoute = require("./routes/hierarchyStructureRoute");
+const hierarchyValueRoute = require("./routes/hierarchyValueRoute");
+
 mongoose
   .connect(dbURI)
   .then(() => {
@@ -30,13 +33,15 @@ app.use(
   })
 );
 //routes
-app.use("/v1/movie-genre", movieGenreRoute);
-app.use("/v1/movie", movieRoute);
-app.use("/v1/user", userRoute);
-app.use("/v1/auth", authRoute);
-app.use("/v1/cinema", cinemaRoute);
-app.use("/v1/room-type", roomTypeRoute);
-app.use("/v1/room", roomRoute);
+app.use("/api/movie-genres", movieGenreRoute);
+app.use("/api/movies", movieRoute);
+app.use("/api/user", userRoute);
+app.use("/api/auth", authRoute);
+app.use("/api/cinema", cinemaRoute);
+app.use("/api/room-type", roomTypeRoute);
+app.use("/api/room", roomRoute);
+app.use("/api/hierarchy-structures", hierarchyStructureRoute);
+app.use("/api/hierarchy-values", hierarchyValueRoute);
 
 app.get("/", (req, res) => {
   return res.send("Hello World");
