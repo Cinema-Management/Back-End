@@ -5,8 +5,8 @@ const AutoIncrement = require("mongoose-sequence")(mongoose);
 
 const MovieSchema = new Schema(
   {
-    code: { type: String, required: true },
-    genres_code: [{ type: String, ref: "MovieGenre" }],
+    code: { type: String, unique: true, required: true },
+    movieGenreCode: [{ type: String, ref: "MovieGenre" }],
     name: { type: String, required: true },
     image: { type: String, required: false },
     duration: { type: Number, required: false },
