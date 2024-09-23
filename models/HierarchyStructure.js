@@ -2,26 +2,29 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const mongooseDelete = require("mongoose-delete");
 const AutoIncrement = require("mongoose-sequence")(mongoose);
-
-const MovieGenreSchema = new Schema(
+const HierarchyStructureSchema = new Schema(
   {
     code: { type: String, required: true },
     name: { type: String, required: true },
   },
   {
     timestamps: true,
-    collection: "movie_genres",
+    collection: "hierarchy_structures",
   }
 );
 
 // Add plugins
+HierarchyStructureSchema.plugin(AutoIncrement, {
+  inc_field: "hierarchyStructureId",
+});
 
-MovieGenreSchema.plugin(AutoIncrement, { inc_field: "movieGenreId" });
-
-MovieGenreSchema.plugin(mongooseDelete, {
+HierarchyStructureSchema.plugin(mongooseDelete, {
   deletedAt: true,
   overrideMethods: "all",
 });
 
-const MovieGenre = mongoose.model("MovieGenre", MovieGenreSchema);
-module.exports = MovieGenre;
+const HierarchyStructure = mongoose.model(
+  "HierarchyStructure",
+  HierarchyStructureSchema
+);
+module.exports = HierarchyStructure;
