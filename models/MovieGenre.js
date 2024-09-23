@@ -5,11 +5,12 @@ const AutoIncrement = require("mongoose-sequence")(mongoose);
 
 const MovieGenreSchema = new Schema(
   {
-    code: { type: String, unique: true, required: true },
+    code: { type: String, required: true },
     name: { type: String, required: true },
   },
   {
     timestamps: true,
+    collection: "movie_genres",
   }
 );
 
