@@ -2,7 +2,7 @@ const Movie = require("../models/Movie");
 const MovieGenre = require("../models/MovieGenre");
 
 const movieController = {
-  addMovie: async (req, res) => {
+  add: async (req, res) => {
     try {
       const {
         name,
@@ -40,9 +40,9 @@ const movieController = {
         movieId: -1,
       });
 
-      let newCode = "MV01"; // Giá trị mặc định cho mục đầu tiên
+      let newCode = "PHIM01"; // Giá trị mặc định cho mục đầu tiên
       if (lastMovieGenre) {
-        const lastCodeNumber = parseInt(lastMovieGenre.code.substring(2));
+        const lastCodeNumber = parseInt(lastMovieGenre.code.substring(4));
 
         // Tăng số thứ tự
         const nextCodeNumber = lastCodeNumber + 1;
@@ -50,8 +50,8 @@ const movieController = {
         // Tạo mã mới với định dạng
         newCode =
           nextCodeNumber < 10
-            ? `MG0${nextCodeNumber}` // Nếu số nhỏ hơn 10, thêm 0 vào trước
-            : `MG${nextCodeNumber}`; // Nếu số lớn hơn hoặc bằng 10, giữ nguyên
+            ? `PHIM0${nextCodeNumber}` // Nếu số nhỏ hơn 10, thêm 0 vào trước
+            : `PHIM${nextCodeNumber}`; // Nếu số lớn hơn hoặc bằng 10, giữ nguyên
       }
 
       const movie = new Movie({
@@ -77,7 +77,7 @@ const movieController = {
       return res.status(400).send({ error: error.message });
     }
   },
-  getAllMovie: async (req, res) => {
+  getAll: async (req, res) => {
     try {
       const movies = await Movie.find().populate({
         path: "movieGenreCode",
@@ -87,6 +87,7 @@ const movieController = {
       const result = movies.map((movie) => ({
         ...movie.toObject(),
         movieGenreCode: movie.movieGenreCode.map((genre) => ({
+          // code: genre.code,
           name: genre.name,
         })),
       }));
@@ -96,7 +97,7 @@ const movieController = {
       return res.status(500).send(error);
     }
   },
-  updateMovie: async (req, res) => {
+  update: async (req, res) => {
     try {
       const movieCode = req.params.code;
       const {
@@ -110,7 +111,6 @@ const movieController = {
         director,
         cast,
         country,
-        rated,
         startDate,
         endDate,
         status,
@@ -143,7 +143,7 @@ const movieController = {
       movie.ageRestriction = ageRestriction || movie.ageRestriction;
       movie.director = director || movie.director;
       movie.country = country || movie.country;
-      movie.rated = rated || movie.rated;
+      movie.cast = cast || movie.cast;
       movie.startDate = startDate || movie.startDate;
       movie.endDate = endDate || movie.endDate;
       movie.status = status || movie.status;

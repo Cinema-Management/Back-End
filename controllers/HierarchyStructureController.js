@@ -21,7 +21,7 @@ const hierarchyStructureController = {
       let newCode = "PHANCAP01"; // Giá trị mặc định cho mục đầu tiên
       if (lastHierarchyStructure) {
         const lastCodeNumber = parseInt(
-          lastHierarchyStructure.hierarchyStructureId
+          lastHierarchyStructure.code.substring(8)
         );
 
         // Tăng số thứ tự

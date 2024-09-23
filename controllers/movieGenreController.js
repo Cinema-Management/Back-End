@@ -1,7 +1,8 @@
 const MovieGenre = require("../models/MovieGenre");
+const { updateMovie } = require("./movieController");
 
 const movieGenreController = {
-  addMovieGenre: async (req, res) => {
+  add: async (req, res) => {
     try {
       const { name } = req.body;
 
@@ -17,9 +18,9 @@ const movieGenreController = {
         movieGenreId: -1,
       });
 
-      let newCode = "MG01"; // Giá trị mặc định cho mục đầu tiên
+      let newCode = "TLP01"; // Giá trị mặc định cho mục đầu tiên
       if (lastMovieGenre) {
-        const lastCodeNumber = parseInt(lastMovieGenre.code.substring(2));
+        const lastCodeNumber = parseInt(lastMovieGenre.code.substring(3));
 
         // Tăng số thứ tự
         const nextCodeNumber = lastCodeNumber + 1;
@@ -27,8 +28,8 @@ const movieGenreController = {
         // Tạo mã mới với định dạng
         newCode =
           nextCodeNumber < 10
-            ? `MG0${nextCodeNumber}` // Nếu số nhỏ hơn 10, thêm 0 vào trước
-            : `MG${nextCodeNumber}`; // Nếu số lớn hơn hoặc bằng 10, giữ nguyên
+            ? `TLP0${nextCodeNumber}` // Nếu số nhỏ hơn 10, thêm 0 vào trước
+            : `TPL${nextCodeNumber}`; // Nếu số lớn hơn hoặc bằng 10, giữ nguyên
       }
 
       // Tạo thể loại phim mới
@@ -41,10 +42,35 @@ const movieGenreController = {
     }
   },
 
-  getAllMovieGenres: async (req, res) => {
+  getAll: async (req, res) => {
     try {
       const movieGenres = await MovieGenre.find();
       return res.status(200).send(movieGenres);
+    } catch (error) {
+      return res.status(500).send(error);
+    }
+  },
+  update: async (req, res) => {
+    try {
+      const code = req.params.code;
+      const { name } = req.body;
+
+      const movieGenre = await MovieGenre.findOne({ code: code });
+      if (!movieGenre) {
+        return res.status(404).send({ message: "Movie genre not found" });
+      }
+
+      const existingName = await MovieGenre.findOne({ name });
+      if (existingName) {
+        return res
+          .status(400)
+          .send({ message: "Movie genre name already exists" });
+      }
+
+      movieGenre.name = name;
+      await movieGenre.save();
+
+      return res.status(200).send(movieGenre);
     } catch (error) {
       return res.status(500).send(error);
     }
