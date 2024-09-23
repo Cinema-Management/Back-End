@@ -5,7 +5,6 @@ const movieGenreController = {
     try {
       const { name } = req.body;
 
-      // Kiểm tra xem thể loại đã tồn tại chưa
       const existingGenre = await MovieGenre.findOne({ name });
       if (existingGenre) {
         return res
@@ -44,7 +43,7 @@ const movieGenreController = {
 
   getAllMovieGenres: async (req, res) => {
     try {
-      const movieGenres = await MovieGenre.find().select("-_id");
+      const movieGenres = await MovieGenre.find();
       return res.status(200).send(movieGenres);
     } catch (error) {
       return res.status(500).send(error);
