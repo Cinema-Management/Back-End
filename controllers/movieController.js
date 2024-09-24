@@ -1,13 +1,12 @@
 const Movie = require("../models/Movie");
 const MovieGenre = require("../models/MovieGenre");
+const uploadImageS3 = require("./upLoadImageS3Controller");
 
 const movieController = {
   add: async (req, res) => {
     try {
       const {
         name,
-        movieGenreCode,
-        image,
         duration,
         description,
         trailer,
@@ -20,11 +19,16 @@ const movieController = {
         status,
       } = req.body;
 
+      let movieGenreCode = req.body.movieGenreCode;
+      if (typeof movieGenreCode === "string") {
+        movieGenreCode = [movieGenreCode];
+      } else if (!Array.isArray(movieGenreCode)) {
+        movieGenreCode = [];
+      }
+
       const existingMovie = await Movie.findOne({ name });
       if (existingMovie) {
-        return res
-          .status(400)
-          .send({ message: "Movie genre name already exists" });
+        return res.status(400).send({ message: "Movie name already exists" });
       }
 
       const existingGenres = await MovieGenre.find({
@@ -52,11 +56,16 @@ const movieController = {
             : `PHIM${nextCodeNumber}`;
       }
 
+      let imageUrl = "";
+      if (req.file) {
+        imageUrl = await uploadImageS3(req.file); // Gọi hàm upload ảnh
+      }
+
       const movie = new Movie({
         code: newCode,
         name,
         movieGenreCode,
-        image,
+        image: imageUrl,
         duration,
         description,
         trailer,
