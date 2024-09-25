@@ -139,10 +139,16 @@ const movieController = {
             .send({ message: "One or more movie genres do not exist" });
         }
       }
+      let imageUrl = "";
+      if (req.file) {
+        image = await uploadImageS3(req.file); // Gọi hàm upload ảnh
+      }
 
       movie.name = name || movie.name;
-      movie.movieGenreCode = movieGenreCode || movie.movieGenreCode;
-      movie.image = image || movie.image;
+      if (Array.isArray(movieGenreCode) && movieGenreCode.length > 0) {
+        movie.movieGenreCode = movieGenreCode;
+      }
+      movie.image = imageUrl || movie.image;
       movie.duration = duration || movie.duration;
       movie.description = description || movie.description;
       movie.trailer = trailer || movie.trailer;
@@ -152,7 +158,7 @@ const movieController = {
       movie.cast = cast || movie.cast;
       movie.startDate = startDate || movie.startDate;
       movie.endDate = endDate || movie.endDate;
-      movie.status = status || movie.status;
+      movie.status = status !== undefined ? status : movie.status;
 
       await movie.save();
       return res.status(200).send(movie);
