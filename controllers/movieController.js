@@ -109,8 +109,6 @@ const movieController = {
       const movieCode = req.params.code;
       const {
         name,
-        movieGenreCode,
-        image,
         duration,
         description,
         trailer,
@@ -129,6 +127,14 @@ const movieController = {
       }
 
       // Kiểm tra nếu các mã thể loại phim có tồn tại không
+
+      let movieGenreCode = req.body.movieGenreCode;
+      if (typeof movieGenreCode === "string") {
+        movieGenreCode = [movieGenreCode];
+      } else if (!Array.isArray(movieGenreCode)) {
+        movieGenreCode = [];
+      }
+
       if (movieGenreCode) {
         const existingGenres = await MovieGenre.find({
           code: { $in: movieGenreCode },
@@ -139,26 +145,73 @@ const movieController = {
             .send({ message: "One or more movie genres do not exist" });
         }
       }
-      let imageUrl = "";
+
+      let imageUrl = movie.image; // Giữ nguyên giá trị cũ nếu không có thay đổi
       if (req.file) {
-        image = await uploadImageS3(req.file); // Gọi hàm upload ảnh
+        imageUrl = await uploadImageS3(req.file); // Upload ảnh mới
       }
 
-      movie.name = name || movie.name;
-      if (Array.isArray(movieGenreCode) && movieGenreCode.length > 0) {
+      // Chỉ update những giá trị mới (có thay đổi)
+      if (name && name !== movie.name) {
+        movie.name = name;
+      }
+
+      if (
+        Array.isArray(movieGenreCode) &&
+        movieGenreCode.length > 0 &&
+        movieGenreCode !== movie.movieGenreCode
+      ) {
         movie.movieGenreCode = movieGenreCode;
       }
-      movie.image = imageUrl || movie.image;
-      movie.duration = duration || movie.duration;
-      movie.description = description || movie.description;
-      movie.trailer = trailer || movie.trailer;
-      movie.ageRestriction = ageRestriction || movie.ageRestriction;
-      movie.director = director || movie.director;
-      movie.country = country || movie.country;
-      movie.cast = cast || movie.cast;
-      movie.startDate = startDate || movie.startDate;
-      movie.endDate = endDate || movie.endDate;
-      movie.status = status !== undefined ? status : movie.status;
+
+      if (imageUrl !== movie.image) {
+        movie.image = imageUrl;
+      }
+
+      if (duration && duration !== movie.duration) {
+        movie.duration = duration;
+      }
+
+      if (description && description !== movie.description) {
+        movie.description = description;
+      }
+
+      if (trailer && trailer !== movie.trailer) {
+        movie.trailer = trailer;
+      }
+
+      if (ageRestriction && ageRestriction !== movie.ageRestriction) {
+        movie.ageRestriction = ageRestriction;
+      }
+
+      if (director && director !== movie.director) {
+        movie.director = director;
+      }
+
+      if (country && country !== movie.country) {
+        movie.country = country;
+      }
+
+      if (cast && cast !== movie.cast) {
+        movie.cast = cast;
+      }
+
+      if (startDate && startDate !== movie.startDate) {
+        movie.startDate = startDate;
+      }
+
+      if (endDate && endDate !== movie.endDate) {
+        movie.endDate = endDate;
+      }
+
+      if (
+        status !== undefined &&
+        status !== movie.status &&
+        status !== null &&
+        status !== ""
+      ) {
+        movie.status = status;
+      }
 
       await movie.save();
       return res.status(200).send(movie);
