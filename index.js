@@ -37,7 +37,7 @@ app.use("/api/movie-genres", movieGenreRoute);
 app.use("/api/movies", movieRoute);
 app.use("/api/user", userRoute);
 app.use("/api/auth", authRoute);
-app.use("/api/cinema", cinemaRoute);
+app.use("/api/cinemas", cinemaRoute);
 app.use("/api/room-type", roomTypeRoute);
 app.use("/api/room", roomRoute);
 app.use("/api/hierarchy-structures", hierarchyStructureRoute);
