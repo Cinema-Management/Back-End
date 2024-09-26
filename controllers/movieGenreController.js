@@ -1,5 +1,4 @@
 const MovieGenre = require("../models/MovieGenre");
-const { updateMovie } = require("./movieController");
 
 const movieGenreController = {
   add: async (req, res) => {
