@@ -350,6 +350,26 @@ db.cinemas.insertMany([
   },
 ]);
 
+db.createCollection("products");
+
+db.products.insertMany([
+  {
+    code: "SP01",
+    name: "Coca",
+    description: "Nước ngọt",
+    image:
+      "https://thegioidouong.net/wp-content/uploads/2021/06/coca-300ml-chai-nhua-300x300.jpg",
+    type: 1,
+    _id: "66f4e5218e68509cfe6046f5",
+    deleted: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    status: 0,
+    productId: 1,
+    __v: 0,
+  },
+]);
+
 const movieGenreMax =
   db.movie_genres.find().sort({ movieGenreId: -1 }).limit(1).next()
     ?.movieGenreId || 0;
@@ -368,6 +388,9 @@ const hierarchyValueMax =
 
 const cinemaMax =
   db.cinemas.find().sort({ cinemaId: -1 }).limit(1).next()?.cinemaId || 0;
+
+const productMax =
+  db.products.find().sort({ productId: -1 }).limit(1).next()?.productId || 0;
 
 db.counters.updateOne(
   { id: "movieGenreId" },
@@ -395,5 +418,10 @@ db.counters.updateOne(
 db.counters.updateOne(
   { id: "cinemaId" },
   { $set: { seq: cinemaMax } },
+  { upsert: true }
+);
+db.counters.updateOne(
+  { id: "productId" },
+  { $set: { seq: productMax } },
   { upsert: true }
 );
