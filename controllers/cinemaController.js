@@ -1,5 +1,6 @@
 const Cinema = require("../models/Cinema");
 const HierarchyValue = require("../models/HierarchyValue");
+const Room = require("../models/Room");
 
 const buildFullAddress = async (currentCode) => {
   const addressParts = [];
@@ -71,21 +72,32 @@ const cinemaController = {
 
   getAllFullAddress: async (req, res) => {
     try {
+      // Tìm tất cả các rạp chiếu phim
       const cinemas = await Cinema.find();
 
+      // Kiểm tra nếu không tìm thấy rạp nào
       if (cinemas.length === 0) {
         return res.status(404).send({ message: "No Cinema found." });
       }
 
+      // Xử lý để xây dựng địa chỉ đầy đủ và số lượng phòng cho mỗi rạp
       const cinemasWithAddresses = await Promise.all(
         cinemas.map(async (cinema) => {
           try {
+            // Giả định rằng hàm buildFullAddress nhận mã địa chỉ
             const fullAddress = await buildFullAddress(
               cinema.hierarchyValueCode
             );
+
+            // Tính số lượng phòng cho rạp này
+            const roomsCount = await Room.countDocuments({
+              cinemaCode: cinema.code,
+            });
+
             return {
               ...cinema.toObject(),
-              fullAddress,
+              fullAddress, // Thêm địa chỉ đầy đủ vào kết quả
+              roomsCount, // Thêm số lượng phòng vào kết quả
             };
           } catch (err) {
             console.error(
@@ -95,19 +107,20 @@ const cinemaController = {
             );
             return {
               ...cinema.toObject(),
-              fullAddress: "Address not found",
+              fullAddress: "Address not found", // Trả về thông báo lỗi nếu có
+              roomsCount: 0, // Nếu có lỗi, có thể trả về 0 phòng
             };
           }
         })
       );
 
+      // Trả về danh sách các rạp cùng địa chỉ đầy đủ và số lượng phòng
       return res.status(200).send(cinemasWithAddresses);
     } catch (error) {
       console.error("Lỗi trong getAllFullAddress:", error);
       return res.status(500).send({ message: "Lỗi máy chủ nội bộ" });
     }
   },
-
   update: async (req, res) => {
     try {
       const { code, name, hierarchyValueCode, status } = req.body;
