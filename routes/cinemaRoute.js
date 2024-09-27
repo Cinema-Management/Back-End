@@ -6,5 +6,5 @@ router.post("/", cinemaController.add);
 router.get("/", cinemaController.getAll);
 router.get("/getAllFullAddress", cinemaController.getAllFullAddress);
 
-router.put("/:code", cinemaController.update);
+router.put("/", cinemaController.update);
 module.exports = router;

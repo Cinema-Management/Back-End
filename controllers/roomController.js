@@ -1,29 +1,50 @@
 const Room = require("../models/Room");
+const RoomType = require("../models/RoomType");
+const Cinema = require("../models/Cinema");
 
 const roomController = {
-  addRoom: async (req, res) => {
+  add: async (req, res) => {
     try {
-      const {
-        name,
-        roomTypeCode,
-        cinemaCode,
-        quantityColum,
-        quantityRow,
-        status,
-      } = req.body;
+      const { name, cinemaCode, numRows, numColumns } = req.body;
 
       // Tìm phòng cuối cùng theo mã code
-      const lastRoom = await Room.findOne().sort({ code: -1 });
 
-      let newCode = "ROOM01";
+      let roomTypeCode = req.body.roomTypeCode;
+      if (typeof roomTypeCode === "string") {
+        roomTypeCode = [roomTypeCode];
+      } else if (!Array.isArray(roomTypeCode)) {
+        roomTypeCode = [];
+      }
+
+      const roomTypeExists = await RoomType.find({
+        code: { $in: roomTypeCode },
+      });
+
+      if (roomTypeExists.length !== roomTypeCode.length) {
+        return res.status(400).json({
+          message: "RoomTypeCode not exist! ",
+        });
+      }
+
+      const cinemaExists = await Cinema.findOne({ code: cinemaCode });
+      if (!cinemaExists) {
+        return res.status(400).json({
+          message: "cinemaCode not exist! ",
+        });
+      }
+
+      const lastRoom = await Room.findOne().sort({ roomId: -1 });
+
+      let newCode = "PHONG01";
       if (lastRoom) {
-        // Tách phần số của mã code từ phòng cuối cùng
-        const lastCodeNumber = parseInt(lastRoom.code.replace("ROOM", ""));
+        const lastCodeNumber = parseInt(lastRoom.code.substring(5));
 
-        // Tăng số lên 1 và thêm vào mã mới
-        const nextCodeNumber = (lastCodeNumber + 1).toString().padStart(2, "0");
+        const nextCodeNumber = lastCodeNumber + 1;
 
-        newCode = `ROOM${nextCodeNumber}`;
+        newCode =
+          nextCodeNumber < 10
+            ? `PHONG0${nextCodeNumber}`
+            : `PHONG${nextCodeNumber}`;
       }
 
       const room = new Room({
@@ -31,9 +52,8 @@ const roomController = {
         name,
         roomTypeCode,
         cinemaCode,
-        quantityColum,
-        quantityRow,
-        status,
+        numRows,
+        numColumns,
       });
 
       await room.save();
@@ -43,12 +63,121 @@ const roomController = {
     }
   },
 
-  getAllRoom: async (req, res) => {
+  getAll: async (req, res) => {
     try {
       const rooms = await Room.find();
       return res.status(200).send(rooms);
     } catch (error) {
       return res.status(500).send({ error: error.message });
+    }
+  },
+
+  getAllByCinemaCode: async (req, res) => {
+    try {
+      const { cinemaCode } = req.params; // Lấy cinemaCode từ params
+
+      // Tìm các phòng theo cinemaCode và populate để lấy thông tin loại phòng
+      const rooms = await Room.find({ cinemaCode }).populate({
+        path: "roomTypeCode", // Trường chứa mã loại phòng
+        model: "RoomType", // Mô hình RoomType
+        select: "code name -_id", // Chỉ lấy trường code và name, loại bỏ _id
+        foreignField: "code",
+      });
+
+      // Kiểm tra xem có phòng nào không
+      if (rooms.length === 0) {
+        return res.status(200).send(rooms);
+      }
+
+      // Định dạng lại kết quả để trả về tên loại phòng
+      const formattedRooms = rooms.map((room) => ({
+        ...room.toObject(), // Chuyển đổi sang đối tượng
+        roomTypeName: room.roomTypeCode.map((type) => type.name).join(", "), // Lấy tên loại phòng
+      }));
+
+      return res.status(200).send(formattedRooms);
+    } catch (error) {
+      return res.status(500).send({ error: error.message });
+    }
+  },
+
+  update: async (req, res) => {
+    try {
+      const {
+        code,
+        name,
+        cinemaCode,
+        numRows,
+        numColumns,
+        roomTypeCode,
+        status,
+      } = req.body;
+
+      // Tìm phòng theo mã code
+      const room = await Room.findOne({ code });
+      if (!room) {
+        return res.status(404).json({
+          message: "Room not found!",
+        });
+      }
+
+      // Chỉ cập nhật các trường nếu giá trị mới khác với giá trị cũ
+      if (name && name !== room.name) {
+        room.name = name;
+      }
+
+      if (cinemaCode && cinemaCode !== room.cinemaCode) {
+        const cinemaExists = await Cinema.findOne({ code: cinemaCode });
+        if (!cinemaExists) {
+          return res.status(400).json({
+            message: "cinemaCode not exist!",
+          });
+        }
+        room.cinemaCode = cinemaCode;
+      }
+
+      if (numRows && numRows !== room.numRows) {
+        room.numRows = numRows;
+      }
+
+      if (numColumns && numColumns !== room.numColumns) {
+        room.numColumns = numColumns;
+      }
+
+      if (
+        status !== undefined &&
+        status !== room.status &&
+        status !== null &&
+        status !== ""
+      ) {
+        room.status = status;
+      }
+
+      // Cập nhật roomTypeCode
+      if (roomTypeCode) {
+        let updatedRoomTypeCode = Array.isArray(roomTypeCode)
+          ? roomTypeCode
+          : [roomTypeCode];
+
+        const roomTypeExists = await RoomType.find({
+          code: { $in: updatedRoomTypeCode },
+        });
+
+        if (roomTypeExists.length !== updatedRoomTypeCode.length) {
+          return res.status(400).json({
+            message: "RoomTypeCode not exist!",
+          });
+        }
+
+        room.roomTypeCode = updatedRoomTypeCode;
+      }
+
+      // Lưu lại phòng đã cập nhật
+      await room.save();
+
+      return res.status(200).send(room);
+    } catch (error) {
+      return res.status(400).send({ error: error.message });
     }
   },
 };
