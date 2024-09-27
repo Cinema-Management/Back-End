@@ -1,4 +1,4 @@
-const hierarchyValueController = require("../controllers/HierarchyValueController");
+const hierarchyValueController = require("../controllers/hierarchyValueController");
 
 const router = require("express").Router();
 
