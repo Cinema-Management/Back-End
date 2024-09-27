@@ -1,48 +1,57 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
+const mongooseDelete = require("mongoose-delete");
+const AutoIncrement = require("mongoose-sequence")(mongoose);
 
 const RoomSchema = new Schema(
   {
     code: {
       type: String,
       required: true,
+      trim: true,
     },
-    roomTypeCode: {
-      type: String,
-      ref: "RoomType",
-    },
+    roomTypeCode: [
+      {
+        type: String,
+        ref: "RoomType",
+        trim: true,
+      },
+    ],
     cinemaCode: {
       type: String,
       ref: "Cinema",
+      trim: true,
     },
     name: {
       type: String,
       required: true,
+      trim: true,
     },
-    quantityColum: {
+    numRows: {
       type: Number,
       required: true,
-      default: 1,
+      min: 1,
     },
-    quantityRow: {
+
+    numColumns: {
       type: Number,
       required: true,
-      default: 1,
+      min: 1,
     },
-    capacity: {
-      type: Number,
-    },
+
     status: {
       type: Number,
-      default: 1,
+      default: 0,
     },
   },
   { timestamps: true }
 );
 
-RoomSchema.pre("save", function (next) {
-  this.capacity = this.quantityColum * this.quantityRow;
-  next();
+RoomSchema.plugin(AutoIncrement, { inc_field: "roomId" });
+
+RoomSchema.plugin(mongooseDelete, {
+  deletedAt: true,
+  overrideMethods: "all",
 });
 
 const Room = mongoose.model("Room", RoomSchema);
