@@ -26,15 +26,9 @@ const cinemaController = {
     try {
       const { name, hierarchyValueCode } = req.body;
 
-      const existingCinema = await Cinema.findOne({ name });
+      const existingCinema = await Cinema.findOne({ hierarchyValueCode });
       if (existingCinema) {
-        return res.status(400).send({ message: "Cinema name already exists" });
-      }
-      const existingLocation = await HierarchyValue.findOne({
-        code: hierarchyValueCode,
-      });
-      if (existingLocation) {
-        return res.status(400).send({ message: "Address code already exists" });
+        return res.status(400).send({ message: "Address  already exists" });
       }
 
       const lastCinema = await Cinema.findOne().sort({
@@ -78,7 +72,6 @@ const cinemaController = {
   getAllFullAddress: async (req, res) => {
     try {
       const cinemas = await Cinema.find();
-      console.log("Cinemas found:", cinemas);
 
       if (cinemas.length === 0) {
         return res.status(404).send({ message: "No Cinema found." });
@@ -117,40 +110,52 @@ const cinemaController = {
 
   update: async (req, res) => {
     try {
-      const code = req.params.code;
-      const { name, hierarchyValueCode, status } = req.body;
+      const { code, name, hierarchyValueCode, status } = req.body;
 
-      // Tìm rạp chiếu với code tương ứng
-      const cinema = await Cinema.findOne({ code });
-      if (!cinema) {
-        return res.status(404).send({ message: "Not found" });
+      // Tìm rạp dựa trên mã code
+      const existingCinema = await Cinema.findOne({ code });
+      if (!existingCinema) {
+        return res.status(404).send({ message: "Cinema not found" });
       }
 
-      // Kiểm tra nếu hierarchyValueCode có tồn tại trong HierarchyValue
-      if (hierarchyValueCode) {
-        const hierarchyExists = await HierarchyValue.findOne({
-          code: hierarchyValueCode,
+      // Nếu giá trị hierarchyValueCode mới khác với giá trị cũ, kiểm tra xem địa chỉ đó đã tồn tại chưa
+      if (
+        hierarchyValueCode &&
+        hierarchyValueCode !== existingCinema.hierarchyValueCode
+      ) {
+        const existingCinemaAddress = await Cinema.findOne({
+          hierarchyValueCode,
         });
-        if (!hierarchyExists) {
-          return res
-            .status(400)
-            .send({ message: "Address code already exists" });
+        if (existingCinemaAddress) {
+          return res.status(400).send({ message: "Address already exists" });
         }
-        cinema.hierarchyValueCode = hierarchyValueCode;
       }
 
-      // Cập nhật các trường khác nếu có
+      // Cập nhật tên nếu có
       if (name) {
-        cinema.name = name;
-      }
-      if (status !== undefined) {
-        cinema.status = status; // Kiểm tra status có thể là 0 hoặc 1
+        existingCinema.name = name;
       }
 
-      await cinema.save();
-      return res.status(200).send(cinema);
+      // Cập nhật hierarchyValueCode nếu có
+      if (hierarchyValueCode) {
+        existingCinema.hierarchyValueCode = hierarchyValueCode;
+      }
+
+      if (
+        status !== undefined &&
+        status !== existingCinema.status &&
+        status !== null &&
+        status !== ""
+      ) {
+        existingCinema.status = status;
+      }
+
+      // Lưu thay đổi vào cơ sở dữ liệu
+      await existingCinema.save();
+
+      return res.status(200).send(existingCinema);
     } catch (error) {
-      return res.status(500).send({ error: error.message });
+      return res.status(400).send({ error: error.message });
     }
   },
 };
