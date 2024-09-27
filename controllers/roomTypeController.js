@@ -1,16 +1,29 @@
 const RoomType = require("../models/RoomType");
 
 const roomTypeController = {
-  addRoomType: async (req, res) => {
+  add: async (req, res) => {
     try {
       const { name } = req.body;
 
-      const lastRoomType = await RoomType.findOne().sort({ code: -1 });
+      const existingName = await RoomType.findOne({ name });
+      if (existingName) {
+        return res
+          .status(400)
+          .send({ message: "RoomType name already exists" });
+      }
 
-      let newCode = "RT01";
+      const lastRoomType = await RoomType.findOne().sort({ roomTypeId: -1 });
+
+      let newCode = "LPC01";
       if (lastRoomType) {
-        const lastCodeNumber = parseInt(lastRoomType.code.substring(2));
-        newCode = `RT${String(lastCodeNumber + 1).padStart(2, "0")}`;
+        const lastCodeNumber = parseInt(lastRoomType.code.substring(3));
+
+        const nextCodeNumber = lastCodeNumber + 1;
+
+        newCode =
+          nextCodeNumber < 10
+            ? `LPC0${nextCodeNumber}`
+            : `LPC${nextCodeNumber}`;
       }
 
       const roomType = new RoomType({ code: newCode, name });
@@ -20,7 +33,7 @@ const roomTypeController = {
       return res.status(400).send(error);
     }
   },
-  getAllRoomTypes: async (req, res) => {
+  getAll: async (req, res) => {
     try {
       const roomTypes = await RoomType.find();
       return res.status(200).send(roomTypes);
