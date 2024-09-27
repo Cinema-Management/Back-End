@@ -73,11 +73,12 @@ const hierarchyValueController = {
     try {
       const { name, parentCode, level, hierarchyStructureCode } = req.body;
 
-      const existingName = await HierarchyValue.findOne({ name, level });
-      if (existingName) {
-        return res
-          .status(400)
-          .send({ message: "Name already exists in this level" });
+      const hierarchyValueByNameAndLevel = await HierarchyValue.findOne({
+        name,
+        level,
+      });
+      if (hierarchyValueByNameAndLevel) {
+        return res.status(200).send(hierarchyValueByNameAndLevel);
       }
 
       const code = await hierarchyValueController.generateCode(
@@ -138,8 +139,13 @@ const hierarchyValueController = {
       // Kết hợp các phần của địa chỉ lại thành chuỗi
       const fullAddress = fullAddressParts.join(", ");
 
+      const [addressDetail = "", ward = "", district = "", province = ""] =
+        fullAddressParts;
+
       // Trả về địa chỉ đầy đủ
-      return res.status(200).json({ fullAddress });
+      return res
+        .status(200)
+        .json({ fullAddress, addressDetail, ward, district, province });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: "Internal Server Error" });
