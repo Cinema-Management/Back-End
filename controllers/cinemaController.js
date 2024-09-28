@@ -171,6 +171,59 @@ const cinemaController = {
       return res.status(400).send({ error: error.message });
     }
   },
+
+  delete: async (req, res) => {
+    try {
+      const { code } = req.params; // Lấy code của cinema từ URL
+
+      // Tìm kiếm cinema theo code
+      const cinema = await Cinema.findOne({ code: code });
+
+      // Kiểm tra nếu cinema không tồn tại
+      if (!cinema) {
+        return res.status(404).json({ message: "Cinema not found" });
+      }
+
+      // Kiểm tra trạng thái status, chỉ cho phép xóa khi status = 0
+      if (cinema.status !== 0) {
+        return res
+          .status(400)
+          .json({ message: "Active cinema cannot be deleted" });
+      }
+
+      // Xóa mềm cinema (soft delete) bằng mongoose-delete dựa trên code
+      const deletedCinema = await Cinema.delete({ code: code });
+
+      return res.status(200).json({
+        message: "Cinema deleted successfully",
+        data: deletedCinema,
+      });
+    } catch (error) {
+      return res.status(500).json({ message: "Error deleting cinema", error });
+    }
+  },
+
+  restore: async (req, res) => {
+    try {
+      const { code } = req.params; // Lấy code của cinema từ URL
+
+      // Khôi phục cinema đã xóa
+      const restoredCinema = await Cinema.restore({ code: code });
+
+      if (!restoredCinema) {
+        return res
+          .status(404)
+          .json({ message: "Cinema not found or not deleted" });
+      }
+
+      return res.status(200).json({
+        message: "Cinema restored successfully",
+        data: restoredCinema,
+      });
+    } catch (error) {
+      return res.status(500).json({ message: "Error restoring cinema", error });
+    }
+  },
 };
 
 module.exports = cinemaController;
