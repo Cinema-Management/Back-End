@@ -2,15 +2,47 @@ const Product = require("../models/Product");
 const { update } = require("./movieController");
 const uploadImageS3 = require("./upLoadImageS3Controller");
 const productController = {
+  getAll: async (req, res) => {
+    try {
+      const products = await Product.find();
+      res.json(products);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
+  getNotSeat: async (req, res) => {
+    try {
+      const products = await Product.find({ type: { $ne: 0 } });
+
+      const productMap = {};
+      const allProducts = await Product.find();
+      allProducts.forEach((product) => {
+        productMap[product.code] = product.name;
+      });
+
+      const result = products.map((product) => {
+        const comboItemNames = product.comboItems.map((item) => {
+          return {
+            code: item.code,
+            name: productMap[item.code] || "Không tìm thấy",
+            quantity: item.quantity,
+          };
+        });
+
+        return {
+          ...product.toObject(),
+          comboItemNames,
+        };
+      });
+
+      res.json(result);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
   add: async (req, res) => {
     try {
       const { name, description, type } = req.body;
-
-      const existingMovie = await Product.findOne({ name });
-
-      if (existingMovie) {
-        return res.status(400).send({ message: "Product name already exists" });
-      }
 
       const lastProduct = await Product.findOne().sort({
         productId: -1,
@@ -204,14 +236,6 @@ const productController = {
     }
   },
 
-  getAll: async (req, res) => {
-    try {
-      const products = await Product.find();
-      res.json(products);
-    } catch (error) {
-      res.status(400).json({ message: error.message });
-    }
-  },
   update: async (req, res) => {
     try {
       const productCode = req.params.code;
@@ -320,35 +344,18 @@ const productController = {
       res.status(500).json({ message: error.message });
     }
   },
-
-  getNotSeat: async (req, res) => {
+  deleteProduct: async (req, res) => {
     try {
-      const products = await Product.find({ type: { $ne: 0 } });
-
-      const productMap = {};
-      const allProducts = await Product.find();
-      allProducts.forEach((product) => {
-        productMap[product.code] = product.name;
-      });
-
-      const result = products.map((product) => {
-        const comboItemNames = product.comboItems.map((item) => {
-          return {
-            code: item.code,
-            name: productMap[item.code] || "Không tìm thấy",
-            quantity: item.quantity,
-          };
-        });
-
-        return {
-          ...product.toObject(),
-          comboItemNames,
-        };
-      });
-
-      res.json(result);
+      const productCode = req.params.code;
+      const product = await Product.findOne({ code: productCode });
+      if (!product) {
+        return res.status(404).send({ message: "Product not found" });
+      }
+      product.deleted === true;
+      await product.save();
+      return res.status(200).send({ message: "Product deleted" });
     } catch (error) {
-      res.status(400).json({ message: error.message });
+      res.status(500).json({ message: error.message });
     }
   },
 };
