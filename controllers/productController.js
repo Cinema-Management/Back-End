@@ -76,15 +76,17 @@ const productController = {
           }
 
           // Tạo mã tự động cho sản phẩm (mã ghế)
-          const lastProduct = await Product.findOne().sort({ productId: -1 });
-          let newCode = "SP01";
+          const lastProduct = await Product.findOne({ type: 0 }).sort({
+            productId: -1,
+          });
+          let newCode = "GHE01";
           if (lastProduct) {
-            const lastCodeNumber = parseInt(lastProduct.code.substring(2));
+            const lastCodeNumber = parseInt(lastProduct.code.substring(3));
             const nextCodeNumber = lastCodeNumber + 1;
             newCode =
               nextCodeNumber < 10
-                ? `SP0${nextCodeNumber}`
-                : `SP${nextCodeNumber}`;
+                ? `GHE0${nextCodeNumber}`
+                : `GHE${nextCodeNumber}`;
           }
 
           // Tạo sản phẩm (ghế) mới
@@ -175,7 +177,7 @@ const productController = {
     try {
       const { name, description, type } = req.body;
 
-      const lastProduct = await Product.findOne().sort({
+      const lastProduct = await Product.findOne({ type: { $ne: 0 } }).sort({
         productId: -1,
       });
 
@@ -188,7 +190,10 @@ const productController = {
         newCode =
           nextCodeNumber < 10 ? `SP0${nextCodeNumber}` : `SP${nextCodeNumber}`;
       }
-
+      const existName = await Product.findOne({ name: name });
+      if (existName) {
+        return res.status(401).json({ message: "Sản phẩm đã tồn tại!" });
+      }
       let imageUrl = "";
       if (req.file) {
         imageUrl = await uploadImageS3(req.file); // Gọi hàm upload ảnh
@@ -223,8 +228,13 @@ const productController = {
       } else {
         console.log("comboItems is already an array:", parsedComboItems);
       }
-
-      const lastProduct = await Product.findOne().sort({ code: -1 });
+      const existName = await Product.findOne({ name: name });
+      if (existName) {
+        return res.status(401).json({ message: "Sản phẩm đã tồn tại!" });
+      }
+      const lastProduct = await Product.findOne({ type: { $ne: 0 } }).sort({
+        code: -1,
+      });
       let newCode = "SP01";
       if (lastProduct) {
         const lastCodeNumber = parseInt(lastProduct.code.substring(2));
@@ -290,7 +300,10 @@ const productController = {
       if (!product) {
         return res.status(404).send({ message: "Product not found" });
       }
-
+      const existName = await Product.findOne({ name: name });
+      if (existName) {
+        return res.status(401).json({ message: "Sản phẩm đã tồn tại!" });
+      }
       let parsedComboItems = comboItems;
       if (typeof comboItems === "string") {
         try {
@@ -380,7 +393,10 @@ const productController = {
       if (type === 0 && (!row || !column)) {
         return res.status(400).json({ message: "Missing row or column" });
       }
-
+      const existName = await Product.findOne({ name: name });
+      if (existName) {
+        return res.status(401).json({ message: "Sản phẩm đã tồn tại!" });
+      }
       if (type === 2) {
         if (!Array.isArray(comboItems) || comboItems.length === 0) {
           return res
@@ -477,16 +493,49 @@ const productController = {
   },
   deleteProduct: async (req, res) => {
     try {
-      const productCode = req.params.code;
-      const product = await Product.findOne({ code: productCode });
+      const { code } = req.params;
+      const product = await Product.findOne({ code: code });
+
       if (!product) {
-        return res.status(404).send({ message: "Product not found" });
+        return res.status(404).json({ message: "Product not found" });
       }
-      product.deleted === true;
-      await product.save();
-      return res.status(200).send({ message: "Product deleted" });
+
+      if (product.status !== 0) {
+        return res
+          .status(401)
+          .json({ message: "Active product cannot be deleted" });
+      }
+
+      const deletedProduct = await Product.delete({ code: code });
+
+      return res.status(200).json({
+        message: "Product deleted successfully",
+        data: deletedProduct,
+      });
     } catch (error) {
       res.status(500).json({ message: error.message });
+    }
+  },
+  restore: async (req, res) => {
+    try {
+      const { code } = req.params; // Lấy code của cinema từ URL
+
+      const restoredProduct = await Product.restore({ code: code });
+
+      if (!restoredProduct) {
+        return res
+          .status(401)
+          .json({ message: "Product not found or not deleted" });
+      }
+
+      return res.status(200).json({
+        message: "Product restored successfully",
+        data: restoredProduct,
+      });
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ message: "Error restoring product", error });
     }
   },
   deleteAllByTypeZero: async (req, res) => {

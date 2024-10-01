@@ -22,5 +22,5 @@ router.post("/updateStatus/:code", productController.updateStatus);
 router.post("/:code", upload.single("image"), productController.update);
 router.delete("/:code", productController.deleteProduct);
 router.delete("/", productController.deleteAllByTypeZero);
-
+router.patch("/restore/:code", productController.restore);
 module.exports = router;
