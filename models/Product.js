@@ -23,6 +23,7 @@ const ProductSchema = new Schema(
     ],
 
     type: { type: Number, required: true }, // 0: seat, 1:food, 2: combo
+    productTypeCode: { type: String, ref: "ProductType", trim: true },
     status: { type: Number },
   },
   {
