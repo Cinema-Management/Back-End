@@ -1,7 +1,138 @@
 const Product = require("../models/Product");
 const { update } = require("./movieController");
 const uploadImageS3 = require("./upLoadImageS3Controller");
+
+const Room = require("../models/Room");
+const RoomSize = require("../models/RoomSize");
+
 const productController = {
+  generateSeat: async (req, res) => {
+    try {
+      const { roomCode, roomSizeCode } = req.body;
+
+      // Kiểm tra Room có tồn tại không
+      const room = await Room.findOne({ code: roomCode });
+      if (!room) {
+        return res.status(404).json({ message: "Room not found" });
+      }
+
+      // Kiểm tra RoomSize có tồn tại không
+      const roomSize = await RoomSize.findOne({ code: roomSizeCode });
+      if (!roomSize) {
+        return res.status(404).json({ message: "RoomSize not found" });
+      }
+
+      // Xác định số lượng hàng, cột dựa trên kích cỡ phòng
+      let rows, columns;
+      const roomSizeName = roomSize.name.toLowerCase(); // Chuyển thành chữ thường để so sánh
+      if (roomSizeName === "nhỏ") {
+        rows = 6;
+        columns = 8;
+      } else if (roomSizeName === "vừa") {
+        rows = 8;
+        columns = 10;
+      } else if (roomSizeName === "lớn") {
+        rows = 10;
+        columns = 12;
+      } else {
+        return res.status(400).json({ message: "Invalid room size name" });
+      }
+
+      // Tạo ghế dựa trên quy tắc
+      for (let row = 1; row <= rows; row++) {
+        let isLastRow = row === rows; // Kiểm tra xem có phải dòng cuối không
+
+        for (let col = 1; col <= columns; col++) {
+          let productTypeCode = "LSP01"; // Ghế thường
+          let seatImage =
+            "https://td-cinemas.s3.ap-southeast-1.amazonaws.com/Seat.png"; // Hình ghế thường
+          let seatName = "Ghế Thường"; // Tên mặc định ghế thường
+
+          // Phòng nhỏ: tất cả là ghế VIP
+          if (roomSizeName === "nhỏ") {
+            productTypeCode = "LSP02"; // Ghế VIP
+            seatImage =
+              "https://td-cinemas.s3.ap-southeast-1.amazonaws.com/seat_vip.png"; // Hình ghế VIP
+            seatName = "Ghế VIP"; // Tên ghế VIP
+          } else if (roomSizeName === "vừa" || roomSizeName === "lớn") {
+            // Phòng vừa và lớn:
+            if (isLastRow) {
+              // Hàng cuối cùng là ghế đôi
+              if (col % 2 === 1) {
+                productTypeCode = "LSP03"; // Ghế đôi
+                seatImage =
+                  "https://td-cinemas.s3.ap-southeast-1.amazonaws.com/seat_couple.png"; // Hình ghế đôi
+                seatName = "Ghế đôi"; // Tên ghế đôi
+              } else {
+                continue; // Bỏ qua cột ghế thứ 2 của ghế đôi
+              }
+            } else if (row > 3) {
+              // Các hàng sau hàng thứ 3 là ghế VIP
+              productTypeCode = "LSP02"; // Ghế VIP
+              seatImage =
+                "https://td-cinemas.s3.ap-southeast-1.amazonaws.com/seat_vip.png"; // Hình ghế VIP
+              seatName = "Ghế VIP"; // Tên ghế VIP
+            }
+          }
+
+          // Tạo mã tự động cho sản phẩm (mã ghế)
+          const lastProduct = await Product.findOne().sort({ productId: -1 });
+          let newCode = "SP01";
+          if (lastProduct) {
+            const lastCodeNumber = parseInt(lastProduct.code.substring(2));
+            const nextCodeNumber = lastCodeNumber + 1;
+            newCode =
+              nextCodeNumber < 10
+                ? `SP0${nextCodeNumber}`
+                : `SP${nextCodeNumber}`;
+          }
+
+          // Tạo sản phẩm (ghế) mới
+          const newSeat = new Product({
+            code: newCode, // Mã tự động
+            name: seatName, // Tên ghế
+            image: seatImage, // Hình ảnh ghế
+            roomCode: roomCode, // Mã phòng
+            row: row, // Số hàng
+            column: col, // Số cột
+            type: 0, // Ghế
+            productTypeCode: productTypeCode, // Loại ghế
+            status: 1, // Kích hoạt
+          });
+
+          // Lưu sản phẩm (ghế) mới
+          await newSeat.save();
+        }
+      }
+
+      return res.status(201).json({ message: "Seats created successfully" });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ message: "Internal server error" });
+    }
+  },
+
+  getAllSeatsByRoomCode: async (req, res) => {
+    try {
+      const { roomCode } = req.params; // Get roomCode from request params
+
+      // Find products where roomCode matches and type represents seats (assuming type field is used for differentiation)
+      const seats = await Product.find({ roomCode, type: 0 }); // Assuming type=1 represents seats
+
+      if (!seats || seats.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "No seats found for this room." });
+      }
+
+      return res.status(200).json(seats);
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ message: "Error retrieving seats.", error });
+    }
+  },
+
   getAll: async (req, res) => {
     try {
       const products = await Product.find();
@@ -356,6 +487,17 @@ const productController = {
       return res.status(200).send({ message: "Product deleted" });
     } catch (error) {
       res.status(500).json({ message: error.message });
+    }
+  },
+  deleteAllByTypeZero: async (req, res) => {
+    try {
+      const result = await Product.deleteMany({ type: 0 });
+      console.log(
+        `${result.deletedCount} products with type = 0 have been deleted.`
+      );
+      return res.status(200).send({ message: "Product deleted" });
+    } catch (error) {
+      console.error("Error deleting products:", error);
     }
   },
 };
