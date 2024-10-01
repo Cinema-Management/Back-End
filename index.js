@@ -18,6 +18,8 @@ const hierarchyValueRoute = require("./routes/hierarchyValueRoute");
 const productRoute = require("./routes/productRoute");
 const productTypeRoute = require("./routes/productTypeRoute");
 const roomSizeRoute = require("./routes/roomSizeRoute");
+const audioRoute = require("./routes/audioRoute");
+const subtitleRoute = require("./routes/subtitleRoute");
 
 mongoose
   .connect(dbURI)
@@ -48,6 +50,8 @@ app.use("/api/hierarchy-structures", hierarchyStructureRoute);
 app.use("/api/hierarchy-values", hierarchyValueRoute);
 app.use("/api/products", productRoute);
 app.use("/api/product-types", productTypeRoute);
+app.use("/api/audios", audioRoute);
+app.use("/api/subtitles", subtitleRoute);
 
 app.get("/", (req, res) => {
   return res.send("Hello World");
