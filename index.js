@@ -16,6 +16,8 @@ const roomRoute = require("./routes/roomRoute");
 const hierarchyStructureRoute = require("./routes/hierarchyStructureRoute");
 const hierarchyValueRoute = require("./routes/hierarchyValueRoute");
 const productRoute = require("./routes/productRoute");
+const productTypeRoute = require("./routes/productTypeRoute");
+const roomSizeRoute = require("./routes/roomSizeRoute");
 
 mongoose
   .connect(dbURI)
@@ -40,10 +42,12 @@ app.use("/api/users", userRoute);
 app.use("/api/auth", authRoute);
 app.use("/api/cinemas", cinemaRoute);
 app.use("/api/room-types", roomTypeRoute);
+app.use("/api/room-sizes", roomSizeRoute);
 app.use("/api/rooms", roomRoute);
 app.use("/api/hierarchy-structures", hierarchyStructureRoute);
 app.use("/api/hierarchy-values", hierarchyValueRoute);
 app.use("/api/products", productRoute);
+app.use("/api/product-types", productTypeRoute);
 
 app.get("/", (req, res) => {
   return res.send("Hello World");

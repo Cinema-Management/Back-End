@@ -1,11 +1,13 @@
 const Room = require("../models/Room");
 const RoomType = require("../models/RoomType");
+const RoomSize = require("../models/RoomSize");
 const Cinema = require("../models/Cinema");
+const Product = require("../models/Product");
 
 const roomController = {
   add: async (req, res) => {
     try {
-      const { name, cinemaCode, numRows, numColumns } = req.body;
+      const { name, cinemaCode, roomSizeCode } = req.body;
 
       // Tìm phòng cuối cùng theo mã code
 
@@ -23,6 +25,13 @@ const roomController = {
       if (roomTypeExists.length !== roomTypeCode.length) {
         return res.status(400).json({
           message: "RoomTypeCode not exist! ",
+        });
+      }
+
+      const roomSizeExists = await RoomSize.findOne({ code: roomSizeCode });
+      if (!roomSizeExists) {
+        return res.status(400).json({
+          message: "roomSizeCode not exist!",
         });
       }
 
@@ -52,8 +61,7 @@ const roomController = {
         name,
         roomTypeCode,
         cinemaCode,
-        numRows,
-        numColumns,
+        roomSizeCode,
       });
 
       await room.save();
@@ -72,17 +80,34 @@ const roomController = {
     }
   },
 
+  getAllByCode: async (req, res) => {
+    try {
+      const { code } = req.params;
+      const rooms = await Room.find({ code: code });
+      return res.status(200).send(rooms);
+    } catch (error) {
+      return res.status(500).send({ error: error.message });
+    }
+  },
+
   getAllByCinemaCode: async (req, res) => {
     try {
       const { cinemaCode } = req.params; // Lấy cinemaCode từ params
 
       // Tìm các phòng theo cinemaCode và populate để lấy thông tin loại phòng
-      const rooms = await Room.find({ cinemaCode }).populate({
-        path: "roomTypeCode", // Trường chứa mã loại phòng
-        model: "RoomType", // Mô hình RoomType
-        select: "code name -_id", // Chỉ lấy trường code và name, loại bỏ _id
-        foreignField: "code",
-      });
+      const rooms = await Room.find({ cinemaCode })
+        .populate({
+          path: "roomTypeCode", // Trường chứa mã loại phòng
+          model: "RoomType", // Mô hình RoomType
+          select: "code name -_id", // Chỉ lấy trường code và name, loại bỏ _id
+          foreignField: "code",
+        })
+        .populate({
+          path: "roomSizeCode", // Trường chứa mã loại phòng
+          model: "RoomSize", // Mô hình RoomType
+          select: "code name -_id", // Chỉ lấy trường code và name, loại bỏ _id
+          foreignField: "code",
+        });
 
       // Kiểm tra xem có phòng nào không
       if (rooms.length === 0) {
@@ -90,10 +115,22 @@ const roomController = {
       }
 
       // Định dạng lại kết quả để trả về tên loại phòng
-      const formattedRooms = rooms.map((room) => ({
-        ...room.toObject(), // Chuyển đổi sang đối tượng
-        roomTypeName: room.roomTypeCode.map((type) => type.name).join(", "), // Lấy tên loại phòng
-      }));
+      const formattedRooms = await Promise.all(
+        rooms.map(async (room) => {
+          // Đếm số lượng ghế trong Product dựa vào roomCode và type = 0 (loại ghế)
+          const totalSeats = await Product.countDocuments({
+            roomCode: room.code, // Mã phòng
+            type: 0, // Loại ghế
+          });
+
+          return {
+            ...room.toObject(), // Chuyển đổi sang đối tượng
+            roomTypeName: room.roomTypeCode.map((type) => type.name).join(", "), // Lấy tên loại phòng
+            roomSizeName: room.roomSizeCode ? room.roomSizeCode.name : null,
+            totalSeats, // Tổng số ghế của phòng
+          };
+        })
+      );
 
       return res.status(200).send(formattedRooms);
     } catch (error) {
@@ -103,15 +140,7 @@ const roomController = {
 
   update: async (req, res) => {
     try {
-      const {
-        code,
-        name,
-        cinemaCode,
-        numRows,
-        numColumns,
-        roomTypeCode,
-        status,
-      } = req.body;
+      const { code, name, cinemaCode, roomTypeCode, status } = req.body;
 
       // Tìm phòng theo mã code
       const room = await Room.findOne({ code });
@@ -134,14 +163,6 @@ const roomController = {
           });
         }
         room.cinemaCode = cinemaCode;
-      }
-
-      if (numRows && numRows !== room.numRows) {
-        room.numRows = numRows;
-      }
-
-      if (numColumns && numColumns !== room.numColumns) {
-        room.numColumns = numColumns;
       }
 
       if (
