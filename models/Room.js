@@ -27,16 +27,12 @@ const RoomSchema = new Schema(
       required: true,
       trim: true,
     },
-    numRows: {
-      type: Number,
+    roomSizeCode: {
+      // Thêm trường liên kết với bảng kích cỡ
+      type: String,
+      ref: "RoomSize",
       required: true,
-      min: 1,
-    },
-
-    numColumns: {
-      type: Number,
-      required: true,
-      min: 1,
+      trim: true,
     },
 
     status: {
