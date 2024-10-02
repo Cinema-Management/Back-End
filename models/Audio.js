@@ -2,26 +2,28 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const mongooseDelete = require("mongoose-delete");
 const AutoIncrement = require("mongoose-sequence")(mongoose);
-const SubtitleSchema = new Schema(
+const AudioSchema = new Schema(
   {
     code: {
       type: String,
       required: true,
-      unique: true,
+      trim: true,
     },
     name: {
       type: String,
       required: true,
+      trim: true,
     },
   },
   { timestamps: true }
 );
 //add plugins
-SubtitleSchema.plugin(AutoIncrement, { inc_field: "subtitleId" });
-SubtitleSchema.plugin(mongooseDelete, {
+AudioSchema.plugin(AutoIncrement, { inc_field: "audioId" });
+AudioSchema.plugin(mongooseDelete, {
   deletedAt: true,
   overrideMethods: "all",
 });
 
-const Subtitle = mongoose.model("Subtitle", SubtitleSchema);
-module.exports = Subtitle;
+const Audio = mongoose.model("Audio", AudioSchema);
+
+module.exports = Audio;
