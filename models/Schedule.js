@@ -13,21 +13,32 @@ const ScheduleSchema = new Schema(
       type: String,
       ref: "Movie",
       required: true,
+      trim: true,
     },
     roomCode: {
       type: String,
       ref: "Room",
       required: true,
+      trim: true,
     },
-    codeSubtitle: {
+    screeningFormatCode: {
+      // Lưu loại suất chiếu
+      type: String,
+      ref: "RoomType", // Từ room lấy ra loại phòng
+      // required: true,
+      trim: true,
+    },
+    subtitleCode: {
       type: String,
       ref: "Subtitle",
       required: false,
+      trim: true,
     },
-    codeDub: {
+    audioCode: {
       type: String,
-      ref: "Dub",
+      ref: "Audio",
       required: false,
+      trim: true,
     },
     date: {
       type: Date,
