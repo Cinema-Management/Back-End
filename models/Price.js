@@ -1,15 +1,19 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
+const mongooseDelete = require("mongoose-delete");
+const AutoIncrement = require("mongoose-sequence")(mongoose);
 
-const PricingSchema = new Schema(
+const PriceSchema = new Schema(
   {
     code: {
       type: String,
       required: true,
+      trim: true,
     },
     description: {
       type: String,
       required: true,
+      trim: true,
     },
     startDate: {
       type: Date,
@@ -21,11 +25,20 @@ const PricingSchema = new Schema(
     },
     status: {
       type: Number,
-      default: 1,
+      default: 0,
     },
   },
   { timestamps: true }
 );
 
-const Pricing = mongoose.model("Pricing", PricingSchema);
-module.exports = Pricing;
+// Add plugins
+
+PriceSchema.plugin(AutoIncrement, { inc_field: "priceId" });
+
+PriceSchema.plugin(mongooseDelete, {
+  deletedAt: true,
+  overrideMethods: "all",
+});
+
+const Price = mongoose.model("Price", PriceSchema);
+module.exports = Price;
