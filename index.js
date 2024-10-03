@@ -21,7 +21,7 @@ const roomSizeRoute = require("./routes/roomSizeRoute");
 const audioRoute = require("./routes/audioRoute");
 const subtitleRoute = require("./routes/subtitleRoute");
 const scheduleRoute = require("./routes/scheduleRoute");
-
+const priceRoute = require("./routes/priceRoute");
 mongoose
   .connect(dbURI)
   .then(() => {
@@ -54,7 +54,7 @@ app.use("/api/product-types", productTypeRoute);
 app.use("/api/audios", audioRoute);
 app.use("/api/subtitles", subtitleRoute);
 app.use("/api/schedules", scheduleRoute);
-
+app.use("/api/prices", priceRoute);
 app.get("/", (req, res) => {
   return res.send("Hello World");
 });
