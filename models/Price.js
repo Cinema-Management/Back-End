@@ -23,6 +23,20 @@ const PriceSchema = new Schema(
       type: Date,
       required: true,
     },
+    dayOfWeek: [
+      {
+        type: Number,
+        required: true,
+      },
+    ],
+    timeSlot: {
+      type: Number,
+      required: true,
+    },
+    type: {
+      type: String,
+      required: true,
+    },
     status: {
       type: Number,
       default: 0,
