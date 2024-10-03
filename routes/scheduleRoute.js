@@ -9,5 +9,5 @@ router.get(
 );
 
 router.post("/", scheduleController.add);
-
+router.put("/:code", scheduleController.update);
 module.exports = router;
