@@ -37,6 +37,11 @@ const PriceDetailSchema = new Schema(
       type: String,
       required: true,
     }, // 0: Seat, 1: Food and Combo
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     status: {
       type: Number,
       default: 0,
