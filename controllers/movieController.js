@@ -1,3 +1,4 @@
+const { get } = require("http");
 const Movie = require("../models/Movie");
 const MovieGenre = require("../models/MovieGenre");
 const uploadImageS3 = require("./upLoadImageS3Controller");
@@ -217,6 +218,15 @@ const movieController = {
       return res.status(200).send(movie);
     } catch (error) {
       return res.status(500).send({ error: error.message });
+    }
+  },
+  getByCode: async (req, res) => {
+    try {
+      const { code } = req.params;
+      const movie = await Movie.findOne({ code: code });
+      return res.status(200).send(movie);
+    } catch (error) {
+      return res.status(404).send({ error: error.message });
     }
   },
 };
