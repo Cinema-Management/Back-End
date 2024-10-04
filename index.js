@@ -22,6 +22,9 @@ const audioRoute = require("./routes/audioRoute");
 const subtitleRoute = require("./routes/subtitleRoute");
 const scheduleRoute = require("./routes/scheduleRoute");
 const priceRoute = require("./routes/priceRoute");
+const promotionRoute = require("./routes/promotionRoute");
+const promotionLineRoute = require("./routes/promotionRouteLine");
+
 mongoose
   .connect(dbURI)
   .then(() => {
@@ -55,6 +58,9 @@ app.use("/api/audios", audioRoute);
 app.use("/api/subtitles", subtitleRoute);
 app.use("/api/schedules", scheduleRoute);
 app.use("/api/prices", priceRoute);
+app.use("/api/promotions", promotionRoute);
+app.use("/api/promotion-lines", promotionLineRoute);
+
 app.get("/", (req, res) => {
   return res.send("Hello World");
 });
