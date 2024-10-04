@@ -9,5 +9,7 @@ router.get(
 );
 
 router.post("/", scheduleController.add);
+router.put("/status/:code", scheduleController.updateStatus);
 router.put("/:code", scheduleController.update);
+
 module.exports = router;

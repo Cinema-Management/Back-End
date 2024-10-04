@@ -334,5 +334,35 @@ const scheduleController = {
       return res.status(500).json({ message: "Internal server error", error });
     }
   },
+
+  updateStatus: async (req, res) => {
+    const { code } = req.params; // Lấy code từ params
+
+    try {
+      // Tìm và cập nhật status của Schedule theo code thành 1
+      const updatedSchedule = await Schedule.findOneAndUpdate(
+        { code: code },
+        { status: 1 }, // Cập nhật trường status thành 1
+        { new: true } // Trả về tài liệu đã được cập nhật
+      );
+
+      // Nếu không tìm thấy schedule theo code
+      if (!updatedSchedule) {
+        return res.status(404).json({ message: "Schedule not found" });
+      }
+
+      // Trả về phản hồi thành công
+      return res.status(200).json({
+        message: "Status updated to 1 successfully",
+        updatedSchedule,
+      });
+    } catch (error) {
+      // Xử lý lỗi nếu có
+      return res.status(500).json({
+        message: "An error occurred while updating the status",
+        error: error.message,
+      });
+    }
+  },
 };
 module.exports = scheduleController;

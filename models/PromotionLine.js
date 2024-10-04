@@ -2,16 +2,22 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 const mongooseDelete = require("mongoose-delete");
 const AutoIncrement = require("mongoose-sequence")(mongoose);
-
-const PromotionSchema = new Schema(
+const PromotionLineSchema = new Schema(
   {
     code: {
       type: String,
       required: true,
     },
+    promotionCode: {
+      type: String,
+      ref: "Promotion",
+      required: true,
+      trim: true,
+    },
     description: {
       type: String,
-      required: false,
+      required: true,
+      trim: true,
     },
     startDate: {
       type: Date,
@@ -26,14 +32,14 @@ const PromotionSchema = new Schema(
       default: 0,
     },
   },
-  { timestamps: true }
+  { timestamps: true, collection: "promotion_lines" }
 );
 //Add plugin
-PromotionSchema.plugin(AutoIncrement, { inc_field: "promotionId" });
-PromotionSchema.plugin(mongooseDelete, {
+PromotionLineSchema.plugin(AutoIncrement, { inc_field: "promotionLineId" });
+PromotionLineSchema.plugin(mongooseDelete, {
   deletedAt: true,
   overrideMethods: "all",
 });
 
-const Promotion = mongoose.model("Promotion", PromotionSchema);
-module.exports = Promotion;
+const PromotionLine = mongoose.model("PromotionLine", PromotionLineSchema);
+module.exports = PromotionLine;
