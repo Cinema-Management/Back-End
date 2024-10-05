@@ -311,7 +311,7 @@ const priceController = {
       // Kiểm tra xem priceCode có tồn tại trong bảng Price không
       const existingPrice = await Price.findOne({ code: priceCode });
       if (!existingPrice) {
-        return res.status(404).send({
+        return res.status(401).send({
           message: "Price not found",
         });
       }
@@ -424,6 +424,86 @@ const priceController = {
     } catch (error) {
       console.error("Error:", error);
       res.status(500).send({ message: error.message });
+    }
+  },
+
+  getPriceDetails: async (req, res) => {
+    const { dayOfWeek, timeSlot, productTypeCode, roomTypeCode } = req.query;
+
+    try {
+      const priceDetails = await PriceDetail.find({
+        productTypeCode: productTypeCode,
+        roomTypeCode: roomTypeCode,
+      }).populate({
+        path: "priceCode",
+        match: {
+          status: 1,
+          type: 0,
+        },
+        select:
+          "code description dayOfWeek status timeSlot startDate endDate type",
+        foreignField: "code",
+      });
+
+      if (!priceDetails || priceDetails.length === 0) {
+        return res.status(400).send({
+          message: "No price details found for the specified criteria.",
+        });
+      }
+
+      const filteredPriceDetails = priceDetails.filter((priceDetail) => {
+        if (priceDetail.priceCode && priceDetail.priceCode.dayOfWeek) {
+          return (
+            priceDetail.priceCode.dayOfWeek.includes(Number(dayOfWeek)) &&
+            priceDetail.priceCode.timeSlot === Number(timeSlot)
+          );
+        }
+        return false;
+      });
+
+      if (!filteredPriceDetails || filteredPriceDetails.length === 0) {
+        return res.status(400).send({
+          message: "No price details found for the specified criteria.",
+        });
+      }
+
+      return res.status(200).json(filteredPriceDetails);
+    } catch (error) {
+      return res.status(500).send({ message: error.message });
+    }
+  },
+
+  getPriceDetailsFood: async (req, res) => {
+    const { productCode } = req.query;
+    console.log(productCode);
+    try {
+      const priceDetails = await PriceDetail.find({
+        productCode: productCode,
+      }).populate({
+        path: "priceCode",
+        match: {
+          status: 1,
+          type: 1,
+        },
+        select: "code name status startDate endDate type",
+        foreignField: "code",
+      });
+
+      console.log("Price Details:", priceDetails);
+
+      if (
+        !priceDetails ||
+        priceDetails.length === 0 ||
+        !priceDetails[0].priceCode
+      ) {
+        return res.status(400).send({
+          message: "No price details found for the specified criteria.",
+        });
+      }
+
+      return res.status(200).json(priceDetails);
+    } catch (error) {
+      return res.status(500).send({ message: error.message });
     }
   },
 };
