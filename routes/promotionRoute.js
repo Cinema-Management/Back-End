@@ -8,5 +8,6 @@ router.get(
 );
 
 router.post("/", promotionController.add);
+router.put("/:code", promotionController.update);
 
 module.exports = router;
