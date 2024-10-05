@@ -7,6 +7,82 @@ const Product = require("../models/Product");
 const priceController = {
   add: async (req, res) => {
     try {
+      const {
+        description,
+        startDate,
+        endDate,
+        dayOfWeek,
+        timeSlot,
+        status,
+        type,
+      } = req.body;
+
+      const existingPrice = await Price.findOne({
+        description,
+        type,
+        timeSlot,
+        dayOfWeek,
+      });
+      const currentDate = new Date();
+      const startDateNew = startDate;
+      const endDateNew = endDate;
+
+      if (existingPrice) {
+        const startDateExisting = new Date(startDate);
+        const endDateExisting = new Date(existingPrice.endDate);
+        if (startDateExisting <= endDateExisting) {
+          return res.status(400).send({
+            message: "Price description already exists for the same type",
+          });
+        }
+      }
+
+      if (new Date(startDateNew) <= currentDate) {
+        return res.status(400).send({
+          message: "Start date must be greater than the current date",
+        });
+      }
+      if (endDateNew < startDateNew) {
+        return res.status(400).send({
+          message:
+            "The end date must be greater than or equal to the start date",
+        });
+      }
+
+      const lastPrice = await Price.findOne().sort({
+        priceId: -1,
+      });
+
+      let newCode = "BG01";
+      if (lastPrice) {
+        const lastCodeNumber = parseInt(lastPrice.code.substring(2));
+
+        const nextCodeNumber = lastCodeNumber + 1;
+
+        newCode =
+          nextCodeNumber < 10 ? `BG0${nextCodeNumber}` : `BG${nextCodeNumber}`;
+      }
+
+      const price = new Price({
+        code: newCode,
+        description,
+        startDate: startDateNew,
+        endDate: endDateNew,
+        type,
+        dayOfWeek,
+        timeSlot,
+        status,
+      });
+
+      await price.save();
+      return res.status(201).send(price);
+    } catch (error) {
+      res.status(500).send({ error: error.message });
+    }
+  },
+
+  addPriceFood: async (req, res) => {
+    try {
       const { description, startDate, endDate, status, type } = req.body;
 
       const existingPrice = await Price.findOne({ description, type });
@@ -61,21 +137,32 @@ const priceController = {
       res.status(500).send({ message: error.message });
     }
   },
+
   update: async (req, res) => {
     try {
-      const { description, startDate, endDate, status, type } = req.body;
+      const {
+        description,
+        startDate,
+        endDate,
+        status,
+        type,
+        dayOfWeek,
+        timeSlot,
+      } = req.body;
       const priceCode = req.params.code;
-
+      console.log(priceCode);
       const price = await Price.findOne({ code: priceCode });
       if (!price) {
         return res.status(404).send({ message: "Price not found" });
       }
 
-      const currentDate = new Date();
-      const startDateNew = new Date(startDate);
-      const endDateNew = new Date(endDate);
+      console.log(startDate);
+      console.log(endDate);
 
       if (price.status === 1) {
+        const currentDate = new Date();
+        const startDateNew = new Date(startDate);
+        const endDateNew = new Date(endDate);
         if (endDateNew < startDateNew) {
           return res.status(400).send({
             message:
@@ -84,6 +171,9 @@ const priceController = {
         }
         price.endDate = endDateNew;
       } else {
+        const currentDate = new Date();
+        const startDateNew = new Date(startDate);
+        const endDateNew = new Date(endDate);
         if (new Date(startDateNew) <= currentDate) {
           return res.status(400).send({
             message: "Start date must be greater than the current date",
@@ -95,22 +185,27 @@ const priceController = {
               "The end date must be greater than or equal to the start date",
           });
         }
-      }
-
-      if (description && description !== price.description) {
-        price.description = description;
-      }
-      if (startDate && startDate !== price.startDate) {
-        price.startDate = startDateNew;
-      }
-      if (endDate && endDate !== price.endDate) {
-        price.endDate = endDateNew;
-      }
-      if (status && status !== price.status) {
-        price.status = status;
-      }
-      if (type && type !== price.type) {
-        price.type = type;
+        if (dayOfWeek && dayOfWeek !== price.dayOfWeek) {
+          price.dayOfWeek = dayOfWeek;
+        }
+        if (timeSlot && timeSlot !== price.timeSlot) {
+          price.timeSlot = timeSlot;
+        }
+        if (description && description !== price.description) {
+          price.description = description;
+        }
+        if (startDate && startDate !== price.startDate) {
+          price.startDate = startDateNew;
+        }
+        if (endDate && endDate !== price.endDate) {
+          price.endDate = endDateNew;
+        }
+        if (status && status !== price.status) {
+          price.status = status;
+        }
+        if (type && type !== price.type) {
+          price.type = type;
+        }
       }
 
       await price.save();
