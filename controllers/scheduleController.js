@@ -171,6 +171,12 @@ const scheduleController = {
           foreignField: "code",
         })
         .populate({
+          path: "cinemaCode",
+          model: "Cinema",
+          select: "code name -_id",
+          foreignField: "code",
+        })
+        .populate({
           path: "roomSizeCode", // Trường chứa mã loại phòng
           model: "RoomSize", // Mô hình RoomType
           select: "code name -_id", // Chỉ lấy trường code và name, loại bỏ _id
@@ -191,7 +197,14 @@ const scheduleController = {
             .populate({
               path: "movieCode",
               model: "Movie",
-              select: "code name -_id",
+              select:
+                "code name image duration ageRestriction movieGenreCode -_id",
+              populate: {
+                path: "movieGenreCode",
+                model: "MovieGenre",
+                select: "code name -_id",
+                foreignField: "code",
+              },
               foreignField: "code",
             })
             .populate({
@@ -204,6 +217,12 @@ const scheduleController = {
               path: "audioCode",
               model: "Audio",
               select: "code name -_id",
+              foreignField: "code",
+            })
+            .populate({
+              path: "roomCode",
+              model: "Room",
+              // select: "code name -_id",
               foreignField: "code",
             })
             .populate({
