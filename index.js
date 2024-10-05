@@ -23,7 +23,7 @@ const subtitleRoute = require("./routes/subtitleRoute");
 const scheduleRoute = require("./routes/scheduleRoute");
 const priceRoute = require("./routes/priceRoute");
 const promotionRoute = require("./routes/promotionRoute");
-const promotionLineRoute = require("./routes/promotionRouteLine");
+const promotionLineRoute = require("./routes/promotionLineRoute");
 
 mongoose
   .connect(dbURI)
