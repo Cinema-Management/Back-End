@@ -6,11 +6,17 @@ router.post("/", upload.single("image"), productController.add);
 
 router.get("/", productController.getAll);
 router.get("/getAllNotSeat", productController.getNotSeat);
-
+router.get("/getNotSeatPrice", productController.getNotSeatPrice);
 router.get(
   "/getAllSeatsByRoomCode/:roomCode",
   productController.getAllSeatsByRoomCode
 );
+
+router.get(
+  "/getAllSeatsByRoomCodeAndScheduleCode/:roomCode",
+  productController.getAllSeatsByRoomCodeAndScheduleCode
+);
+
 router.post("/generateSeat", productController.generateSeat);
 router.post("/addCombo", upload.single("image"), productController.addCombo);
 router.post(

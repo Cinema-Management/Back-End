@@ -506,6 +506,54 @@ const priceController = {
       return res.status(500).send({ message: error.message });
     }
   },
+
+  getAllPriceFood: async (req, res) => {
+    try {
+      // Bước 1: Tìm các sản phẩm không phải ghế
+      const products = await Product.find({ type: { $ne: 0 } });
+      console.log(`Số lượng sản phẩm không phải ghế: ${products.length}`);
+
+      // Bước 2: Lấy ngày hiện tại
+      const currentDate = new Date();
+
+      // Bước 3: Lấy tất cả các mức giá còn hiệu lực
+      const prices = await Price.find({
+        type: "1",
+        status: 1,
+        startDate: { $lte: currentDate }, // Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày hiện tại
+        endDate: { $gte: currentDate }, // Ngày kết thúc phải lớn hơn hoặc bằng ngày hiện tại
+      });
+
+      // Bước 4: Lấy mã giá
+      const priceCodes = prices.map((price) => price.code);
+
+      // Bước 5: Lấy chi tiết giá theo mã giá
+      const priceDetails = await PriceDetail.find({
+        priceCode: { $in: priceCodes }, // Tìm tất cả priceDetail có priceCode trong mảng
+      });
+      console.log(`Số lượng chi tiết giá: ${priceDetails.length}`);
+
+      // Bước 6: Kết hợp sản phẩm với giá
+      const resultPrice = priceDetails.map((priceDetail) => {
+        // Tìm sản phẩm tương ứng với từng chi tiết giá
+        const product = products.find(
+          (product) => product.code === priceDetail.productCode // So sánh mã sản phẩm
+        );
+
+        return {
+          ...priceDetail.toObject(), // Chuyển đổi chi tiết giá thành đối tượng thuần
+          productName: product ? product.name : null, // Thêm tên sản phẩm nếu tìm thấy
+          descriptionProduct: product ? product.description : null, // Thêm mô tả sản phẩm nếu tìm thấy
+          image: product ? product.image : null, // Thêm ảnh sản phẩm nếu tìm thấy
+        };
+      });
+
+      // Bước 7: Gửi kết quả về client
+      res.json(resultPrice);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
 };
 
 module.exports = priceController;
