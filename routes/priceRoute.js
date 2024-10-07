@@ -9,6 +9,7 @@ router.post("/:code", priceController.update);
 router.post("/updateStatus/:code", priceController.updateStatus);
 router.get("/getPrice", priceController.getPriceDetails);
 router.get("/getPriceDetailsFood", priceController.getPriceDetailsFood);
+router.get("/getAllPriceFood", priceController.getAllPriceFood);
 router.get("/", priceController.getAll);
 router.delete("/delete", priceController.deleteAll);
 router.delete("/deleteDetail", priceController.deleteAllDetail);
