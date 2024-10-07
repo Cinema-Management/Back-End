@@ -39,7 +39,7 @@ const PriceSchema = new Schema(
     },
     status: {
       type: Number,
-      default: 0,
+      default: 0, //status: 0: active, 1: inactive
     },
   },
   { timestamps: true }
