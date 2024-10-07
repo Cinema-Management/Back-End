@@ -4,7 +4,23 @@ const uploadImageS3 = require("./upLoadImageS3Controller");
 
 const Room = require("../models/Room");
 const RoomSize = require("../models/RoomSize");
+const Schedule = require("../models/Schedule");
+const Price = require("../models/Price");
 
+const PriceDetail = require("../models/PriceDetail");
+
+function determineTimeSlot(startTime, dayOfWeek) {
+  // Nếu là thứ Hai (dayOfWeek = 2), trả về 1 cho 'Cả ngày'
+  if (dayOfWeek === 2) {
+    return 1; // Cả ngày
+  }
+
+  const hour = new Date(startTime).getHours(); // Lấy giờ từ startTime
+  if (hour < 17) {
+    return 2; // Trước 17h
+  }
+  return 3; // Sau 17h
+}
 const productController = {
   generateSeat: async (req, res) => {
     try {
@@ -135,6 +151,71 @@ const productController = {
     }
   },
 
+  getAllSeatsByRoomCodeAndScheduleCode: async (req, res) => {
+    try {
+      const { roomCode } = req.params;
+      const { scheduleCode } = req.query;
+      // Lấy roomCode và scheduleCode từ tham số yêu cầu
+
+      // Lấy thông tin lịch chiếu để lấy thông tin ngày và khung giờ
+      const schedule = await Schedule.findOne({ code: scheduleCode }); // Tìm theo scheduleCode
+      if (!schedule) {
+        return res.status(404).json({ message: "Schedule not found." });
+      }
+      console.log(schedule);
+
+      const dayOfWeek = schedule.date.getDay(); // Lấy ngày trong tuần từ date (0-6)
+      console.log("dayOfWeek", dayOfWeek);
+
+      const timeSlot = determineTimeSlot(schedule.startTime, dayOfWeek); // Hàm xác định khung giờ
+      console.log("timeSlot", timeSlot);
+
+      // Tìm các sản phẩm (ghế) với roomCode, type=0 (ghế),
+      const seats = await Product.find({ roomCode, type: 0 });
+      console.log("so luong ghe", seats.length);
+      if (!seats || seats.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "No seats found for this room." });
+      }
+
+      // Tìm bảng giá chi tiết cho ghế
+      const prices = await Price.find({
+        type: "0", // So sánh với type
+        status: 1, // So sánh với status
+        dayOfWeek: { $in: [dayOfWeek] }, // So sánh với dayOfWeek
+        timeSlot: timeSlot, // So sánh với timeSlot
+        startDate: { $lte: schedule.date }, // startDate <= schedule.date
+        endDate: { $gte: schedule.date }, // endDate >= schedule.date
+      });
+      console.log("so prices", prices.length);
+
+      const priceDetails = await PriceDetail.find({
+        priceCode: { $in: prices.map((price) => price.code) }, // So sánh với mã giá
+        roomTypeCode: schedule.screeningFormatCode, // So sánh với mã loại phòng
+        // productTypeCode: { $in: seats.map((seat) => seat.productTypeCode) }, // So sánh với productTypeCode của ghế
+      });
+      console.log("so priceDetails", priceDetails.length);
+
+      // Gộp giá vào danh sách ghế
+      const seatsWithPrices = seats.map((seat) => {
+        const priceDetail = priceDetails.find(
+          (price) => price.productTypeCode === seat.productTypeCode // Tìm giá tương ứng cho từng ghế
+        );
+        return {
+          ...seat.toObject(), // Chuyển đổi ghế thành đối tượng thuần
+          price: priceDetail ? priceDetail.price : 0, // Thêm giá nếu có
+          priceDetailCode: priceDetail ? priceDetail.code : null, // Thêm mã giá nếu có
+        };
+      });
+
+      return res.status(200).json(seatsWithPrices);
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ message: "Error retrieving seats.", error });
+    }
+  },
   getAll: async (req, res) => {
     try {
       const products = await Product.find();
@@ -169,6 +250,72 @@ const productController = {
       });
 
       res.json(result);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
+
+  getNotSeatPrice: async (req, res) => {
+    try {
+      // Bước 1: Tìm các sản phẩm không phải ghế
+      const products = await Product.find({ type: { $ne: 0 } });
+
+      // Bước 2: Tạo map để lưu tên sản phẩm
+      const productMap = {};
+      const allProducts = await Product.find();
+      allProducts.forEach((product) => {
+        productMap[product.code] = product.name;
+      });
+
+      // Bước 3: Tạo kết quả cho sản phẩm và lấy comboItemNames
+      const result = products.map((product) => {
+        const comboItemNames = product.comboItems.map((item) => {
+          return {
+            code: item.code,
+            name: productMap[item.code] || "Không tìm thấy",
+            quantity: item.quantity,
+          };
+        });
+
+        return {
+          ...product.toObject(),
+          comboItemNames,
+        };
+      });
+
+      // Bước 4: Lấy ngày hiện tại
+      const currentDate = new Date();
+      const prices = await Price.find({
+        type: "1",
+        status: 1,
+        startDate: { $lte: currentDate }, // Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày hiện tại
+        endDate: { $gte: currentDate }, // Ngày kết thúc phải lớn hơn hoặc bằng ngày hiện tại
+      });
+
+      // Bước 5: Lấy chi tiết giá theo mã giá
+      const priceCodes = prices.map((price) => price.code);
+      const priceDetails = await PriceDetail.find({
+        priceCode: { $in: priceCodes }, // Tìm tất cả priceDetail có priceCode trong mảng
+      });
+
+      // In ra số lượng priceDetails cho debug
+
+      // Bước 6: Kết hợp sản phẩm với giá
+      const resultPrice = result.map((product) => {
+        // Tìm chi tiết giá tương ứng với từng sản phẩm
+        const priceDetail = priceDetails.find(
+          (price) => price.productCode === product.code // So sánh mã sản phẩm
+        );
+
+        return {
+          ...product, // Chuyển đổi ghế thành đối tượng thuần
+          price: priceDetail ? priceDetail.price : 0, // Thêm giá nếu có
+          priceDetailCode: priceDetail ? priceDetail.code : null, // Thêm mã giá nếu có
+        };
+      });
+
+      // Bước 7: Gửi kết quả về client
+      res.json(resultPrice);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }

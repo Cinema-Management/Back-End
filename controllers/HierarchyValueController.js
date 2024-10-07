@@ -1,3 +1,4 @@
+const Cinema = require("../models/Cinema");
 const HierarchyValue = require("../models/HierarchyValue");
 
 function removeVietnameseTones(str) {
@@ -112,6 +113,8 @@ const hierarchyValueController = {
   getFullAddressByCode: async (req, res) => {
     try {
       const { code } = req.params;
+      const cinema = await Cinema.findOne({ code: code });
+      const hierarchyValueCode = cinema.hierarchyValueCode;
 
       // Hàm đệ quy lấy địa chỉ đầy đủ từ phân cấp
       const buildFullAddress = async (currentCode, addressParts = []) => {
@@ -134,7 +137,7 @@ const hierarchyValueController = {
       };
 
       // Lấy ra địa chỉ đầy đủ theo cấp phân cấp từ code được truyền vào
-      const fullAddressParts = await buildFullAddress(code);
+      const fullAddressParts = await buildFullAddress(hierarchyValueCode);
 
       // Kết hợp các phần của địa chỉ lại thành chuỗi
       const fullAddress = fullAddressParts.join(", ");
@@ -143,9 +146,7 @@ const hierarchyValueController = {
         fullAddressParts;
 
       // Trả về địa chỉ đầy đủ
-      return res
-        .status(200)
-        .json({ fullAddress, addressDetail, ward, district, province });
+      return res.status(200).json(fullAddress);
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: "Internal Server Error" });

@@ -27,6 +27,10 @@ const PromotionLineSchema = new Schema(
       type: Date,
       required: true,
     },
+    type: {
+      type: Number,
+      required: true,
+    }, // 0: Km sản phẩm, 1:KM tiền, 2:KM phần trăm
     status: {
       type: Number,
       default: 0,
