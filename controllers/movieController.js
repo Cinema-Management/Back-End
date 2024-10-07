@@ -17,7 +17,6 @@ const movieController = {
         country,
         startDate,
         endDate,
-        status,
       } = req.body;
 
       let movieGenreCode = req.body.movieGenreCode;
@@ -76,7 +75,7 @@ const movieController = {
         country,
         startDate,
         endDate,
-        status,
+        status: 0,
       });
 
       await movie.save();
@@ -90,12 +89,13 @@ const movieController = {
       const movies = await Movie.find().populate({
         path: "movieGenreCode",
         model: "MovieGenre",
+        select: "name code",
         foreignField: "code",
       });
       const result = movies.map((movie) => ({
         ...movie.toObject(),
         movieGenreCode: movie.movieGenreCode.map((genre) => ({
-          // code: genre.code,
+          code: genre.code,
           name: genre.name,
         })),
       }));
@@ -135,6 +135,8 @@ const movieController = {
       } else if (!Array.isArray(movieGenreCode)) {
         movieGenreCode = [];
       }
+
+      console.log(req.body);
 
       if (movieGenreCode) {
         const existingGenres = await MovieGenre.find({
@@ -205,12 +207,7 @@ const movieController = {
         movie.endDate = endDate;
       }
 
-      if (
-        status !== undefined &&
-        status !== movie.status &&
-        status !== null &&
-        status !== ""
-      ) {
+      if (status !== undefined && status !== movie.status) {
         movie.status = status;
       }
 
