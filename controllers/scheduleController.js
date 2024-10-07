@@ -267,9 +267,9 @@ const scheduleController = {
 
       // Tìm lịch chiếu theo code
       const schedule = await Schedule.findOne({ code: code });
-      if (!schedule) {
-        return res.status(404).json({ message: "Schedule not found" });
-      }
+      // if (!schedule) {
+      //   return res.status(404).json({ message: "Schedule not found" });
+      // }
 
       // Cập nhật các trường có thay đổi
       if (movieCode) schedule.movieCode = movieCode;
@@ -358,22 +358,40 @@ const scheduleController = {
     const { code } = req.params; // Lấy code từ params
 
     try {
-      // Tìm và cập nhật status của Schedule theo code thành 1
-      const updatedSchedule = await Schedule.findOneAndUpdate(
-        { code: code },
-        { status: 1 }, // Cập nhật trường status thành 1
-        { new: true } // Trả về tài liệu đã được cập nhật
-      );
+      // Tìm lịch chiếu theo code
+      const schedule = await Schedule.findOne({ code: code });
 
       // Nếu không tìm thấy schedule theo code
-      if (!updatedSchedule) {
+      if (!schedule) {
         return res.status(404).json({ message: "Schedule not found" });
       }
 
+      // Lấy thông tin phim dựa trên movieCode trong schedule
+      const movie = await Movie.findOne({ code: schedule.movieCode });
+
+      // Nếu không tìm thấy phim
+      if (!movie) {
+        return res.status(404).json({ message: "Movie not found" });
+      }
+
+      // So sánh ngày chiếu với ngày phát hành
+      const screeningDate = new Date(schedule.date);
+      const releaseDate = new Date(movie.startDate); // Giả định ngày phát hành là trường 'releaseDate' trong movie
+
+      // Cập nhật status dựa trên điều kiện
+      if (screeningDate < releaseDate) {
+        schedule.status = 2; // Ngày chiếu trước ngày phát hành
+      } else {
+        schedule.status = 1; // Ngày chiếu hợp lệ
+      }
+
+      // Lưu lịch chiếu đã cập nhật
+      await schedule.save();
+
       // Trả về phản hồi thành công
       return res.status(200).json({
-        message: "Status updated to 1 successfully",
-        updatedSchedule,
+        message: "Status updated successfully",
+        updatedSchedule: schedule,
       });
     } catch (error) {
       // Xử lý lỗi nếu có
