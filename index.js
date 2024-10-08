@@ -27,6 +27,8 @@ const promotionLineRoute = require("./routes/promotionLineRoute");
 const salesInvoiceRoute = require("./routes/salesInvoiceRoute");
 const salesInvoiceDetailRoute = require("./routes/salesInvoiceDetailRoute");
 const seatStatusInScheduleRoute = require("./routes/seatStatusInScheduleRoute");
+const promotionDetailRoute = require("./routes/promotionDetailRoute");
+
 mongoose
   .connect(dbURI)
   .then(() => {
@@ -65,6 +67,7 @@ app.use("/api/promotion-lines", promotionLineRoute);
 app.use("/api/sales-invoices", salesInvoiceRoute);
 app.use("/api/sales-invoices-details", salesInvoiceDetailRoute);
 app.use("/api/seat-status-in-schedules", seatStatusInScheduleRoute);
+app.use("/api/promotion-details", promotionDetailRoute);
 
 app.get("/", (req, res) => {
   return res.send("Hello World");

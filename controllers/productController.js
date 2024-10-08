@@ -696,6 +696,18 @@ const productController = {
       console.error("Error deleting products:", error);
     }
   },
+  getAllNotSeatStatusActive: async (req, res) => {
+    try {
+      const products = await Product.find({
+        type: { $ne: 0 },
+        status: 1,
+      }).select("code name");
+
+      res.json(products);
+    } catch (error) {
+      res.status(400).json({ message: error.message });
+    }
+  },
 };
 
 module.exports = productController;
