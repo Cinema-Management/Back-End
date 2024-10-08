@@ -8,6 +8,11 @@ router.get("/", productController.getAll);
 router.get("/getAllNotSeat", productController.getNotSeat);
 router.get("/getNotSeatPrice", productController.getNotSeatPrice);
 router.get(
+  "/getAllNotSeatStatusActive",
+  productController.getAllNotSeatStatusActive
+);
+
+router.get(
   "/getAllSeatsByRoomCode/:roomCode",
   productController.getAllSeatsByRoomCode
 );
@@ -24,6 +29,7 @@ router.post(
   upload.single("image"),
   productController.updateCombo
 );
+
 router.post("/updateStatus/:code", productController.updateStatus);
 router.post("/:code", upload.single("image"), productController.update);
 router.delete("/:code", productController.deleteProduct);
