@@ -26,7 +26,7 @@ const salesInvoiceSchema = new Schema(
       default: null,
     },
     paymentMethod: {
-      type: String,
+      type: Number,
       required: true,
     },
     type: {
