@@ -1,10 +1,12 @@
 const SalesInvoice = require("../models/SalesInvoice");
+const SalesInvoiceDetail = require("../models/SalesInvoiceDetail");
 const Schedule = require("../models/Schedule");
 const Room = require("../models/Room");
 const RoomType = require("../models/RoomType");
 const Movie = require("../models/Movie");
 const User = require("../models/User");
 const Cinema = require("../models/Cinema");
+const { get } = require("mongoose");
 
 const salesInvoiceController = {
   add: async (req, res) => {
@@ -50,10 +52,65 @@ const salesInvoiceController = {
   },
   getAll: async (req, res) => {
     try {
-      const salesInvoices = await SalesInvoice.find();
-      return res.json(salesInvoices);
+      const invoices = await SalesInvoice.find()
+        .populate({
+          path: "scheduleCode",
+          foreignField: "code",
+          populate: [
+            {
+              path: "roomCode",
+              select: "cinemaCode name",
+              foreignField: "code",
+              populate: {
+                path: "cinemaCode",
+                select: "name",
+                foreignField: "code",
+              },
+            },
+            {
+              path: "movieCode",
+              select: "name",
+              foreignField: "code",
+            },
+            {
+              path: "screeningFormatCode",
+              select: "name",
+              foreignField: "code",
+            },
+          ],
+        })
+        .populate({
+          path: "customerCode",
+          select: "name phone",
+          foreignField: "code",
+        })
+        .populate({
+          path: "staffCode",
+          select: "name phone",
+          foreignField: "code",
+        });
+
+      const result = await Promise.all(
+        invoices.map(async (invoice) => {
+          const details = await SalesInvoiceDetail.find({
+            salesInvoiceCode: invoice.code,
+          }).populate({
+            path: "productCode",
+            select: "name seatNumber type description",
+            foreignField: "code",
+          });
+
+          return {
+            ...invoice.toObject(),
+            details,
+          };
+        })
+      );
+
+      res.status(200).json(result);
     } catch (error) {
-      return res.status(500).json({ message: error.message });
+      console.error(error);
+      res.status(500).json({ message: "Server error", error: error.message });
     }
   },
   getHeaderByCode: async (req, res) => {
