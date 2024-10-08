@@ -28,14 +28,9 @@ const promotionCOntroller = {
       const overlappingPromotion = await Promotion.findOne({
         $or: [
           {
-            // Điều kiện 1: Ngày bắt đầu của khuyến mãi mới nằm trong khoảng thời gian của khuyến mãi đã tồn tại
-            startDate: { $lt: endDateNew },
-            endDate: { $gt: startDateNew },
-          },
-          {
-            // Điều kiện 2: Ngày kết thúc của khuyến mãi mới nằm trong khoảng thời gian của khuyến mãi đã tồn tại
-            endDate: { $gt: startDateNew },
-            startDate: { $lt: endDateNew },
+            // Điều kiện 1: Khuyến mãi mới bắt đầu trước khi một khuyến mãi đã tồn tại kết thúc và kết thúc sau khi khuyến mãi đã tồn tại bắt đầu
+            startDate: { $lte: endDateNew },
+            endDate: { $gte: startDateNew },
           },
         ],
       });

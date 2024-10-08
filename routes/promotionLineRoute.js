@@ -3,5 +3,6 @@ const router = require("express").Router();
 
 router.get("/", promotionLineController.getAll);
 router.post("/", promotionLineController.add);
+router.put("/updateStatus", promotionLineController.updateStatus);
 
 module.exports = router;

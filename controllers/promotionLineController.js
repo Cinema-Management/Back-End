@@ -1,5 +1,6 @@
 const PromotionLine = require("../models/PromotionLine");
 const Promotion = require("../models/Promotion");
+const PromotionDetail = require("../models/PromotionDetail ");
 const promotionLineController = {
   add: async (req, res) => {
     try {
@@ -50,14 +51,14 @@ const promotionLineController = {
         type,
         $or: [
           {
-            // Điều kiện 1: Ngày bắt đầu của khuyến mãi mới nằm trong khoảng thời gian của khuyến mãi đã tồn tại
+            // Điều kiện 1: Ngày bắt đầu của dòng khuyến mãi mới nằm trong khoảng thời gian của dòng khuyến mãi đã tồn tại
             startDate: { $lt: endDateNew },
             endDate: { $gt: startDateNew },
           },
           {
-            // Điều kiện 2: Ngày kết thúc của khuyến mãi mới nằm trong khoảng thời gian của khuyến mãi đã tồn tại
-            endDate: { $gt: startDateNew },
-            startDate: { $lt: endDateNew },
+            // Điều kiện 2: Ngày bắt đầu của dòng khuyến mãi hiện có nằm trong khoảng thời gian của dòng khuyến mãi mới
+            startDate: { $gt: startDateNew },
+            endDate: { $lt: endDateNew },
           },
         ],
       });
@@ -80,9 +81,7 @@ const promotionLineController = {
       let newCode = "DKM01";
       if (lastPromotion) {
         const lastCodeNumber = parseInt(lastPromotion.code.substring(3));
-
         const nextCodeNumber = lastCodeNumber + 1;
-
         newCode =
           nextCodeNumber < 10
             ? `DKM0${nextCodeNumber}`
@@ -180,6 +179,22 @@ const promotionLineController = {
       return res.status(200).send(promotionLine); // Trả về khuyến mãi đã được cập nhật
     } catch (error) {
       res.status(500).send({ message: error.message });
+    }
+  },
+  updateStatus: async (req, res) => {
+    try {
+      const { code, status } = req.body;
+
+      const promotionLine = await PromotionLine.findOne({ code: code });
+      if (!promotionLine) {
+        return res.status(404).send({ message: "PromotionLine not found" });
+      }
+
+      promotionLine.status = status;
+      await promotionLine.save();
+      return res.status(201).json(promotionLine);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
   },
 };
