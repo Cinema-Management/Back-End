@@ -146,7 +146,9 @@ const hierarchyValueController = {
         fullAddressParts;
 
       // Trả về địa chỉ đầy đủ
-      return res.status(200).json(fullAddress);
+      return res
+        .status(200)
+        .json({ fullAddress, addressDetail, ward, district, province });
     } catch (error) {
       console.error(error);
       return res.status(500).json({ message: "Internal Server Error" });
