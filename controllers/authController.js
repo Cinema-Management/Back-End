@@ -4,77 +4,99 @@ const jwt = require("jsonwebtoken");
 let refreshTokens = [];
 
 const authController = {
-  signup: async (req, res) => {
+  register: async (req, res) => {
     try {
-      const {
-        code,
-        name,
-        birthDate,
-        gender,
-        address,
-        avatar,
-        phone,
-        email,
-        password,
-        type,
-        isAdmin,
-        status,
-      } = req.body;
+      const { name, birthDate, gender, phone, email, password, type } =
+        req.body;
 
       const salt = bcrypt.genSaltSync(10);
       const hashPassword = bcrypt.hashSync(password, salt);
-      if (email) {
-        const existingUserEmail = await User.findOne({ email: email });
-        if (existingUserEmail) {
-          return res.status(400).send({ error: "Email already exists" });
-        }
+
+      const existingUser = await User.findOne({
+        $or: [
+          { phone: phone, type: type },
+          { email: email, type: type },
+        ],
+      });
+
+      if (existingUser) {
+        return res.status(400).send({
+          error: "A user with the same type, phone, or email already exists.",
+        });
+      }
+
+      let prefix;
+      if (type === 0) {
+        prefix = "KH"; // Mã nhân viên
+      } else if (type === 1) {
+        prefix = "NV"; // Mã khách hàng
       } else {
-        const existingUserPhone = await User.findOne({ phone: phone });
+        return res.status(400).send({ message: "Invalid user type." });
+      }
 
-        if (existingUserPhone) {
-          return res.status(400).send({ error: "Phone already exists" });
+      // Lấy tất cả tài liệu người dùng đã tồn tại
+      const allUsers = await User.findWithDeleted();
+
+      // Tạo mã mới
+      let newCode = `${prefix}01`; // Bắt đầu với 01
+      let existingCodes = new Set();
+
+      // Thu thập các mã đã tồn tại
+      allUsers.forEach((user) => {
+        if (user.code.startsWith(prefix)) {
+          existingCodes.add(user.code);
         }
+      });
+
+      // Tăng số thứ tự nếu mã đã tồn tại
+      let lastCodeNumber = 1;
+      while (existingCodes.has(newCode)) {
+        lastCodeNumber++;
+        newCode = `${prefix}${String(lastCodeNumber).padStart(2, "0")}`; // Đảm bảo có 2 chữ số
       }
 
-      const prefix = "KH";
-      const lastUser = await User.findOne({
-        code: { $regex: `${prefix}` },
-      }).sort({ code: -1 });
-
-      let newCode = `${prefix}01`;
-
-      if (lastUser) {
-        const lastCodeNumber = parseInt(lastUser.code.substring(2));
-        newCode = `${prefix}${String(lastCodeNumber + 1).padStart(2, "0")}`;
-      }
       const user = new User({
         code: newCode,
         name: name,
         birthDate: birthDate,
         gender: gender,
-        address: address,
-        password: hashPassword,
         avatar:
           "https://i.pinimg.com/564x/7b/8f/3a/7b8f3a829162b7656214494b0b87e4e0.jpg",
-        phone: phone || null,
-        email: email || null,
+        password: hashPassword,
+        phone: phone,
+        email: email,
         isAdmin: null,
-        type: 0,
         status: 1,
+        type: type,
       });
 
       // Lưu user vào cơ sở dữ liệu
       await user.save();
-      const accessToken = authController.generateAccessToken(user);
-      const refreshToken = authController.generateRefreshToken(user);
-      res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: false,
-        path: "/",
-        sameSite: "strict",
-      });
 
-      return res.status(200).json({ user, accessToken, refreshToken });
+      if (user) {
+        const accessToken = authController.generateAccessToken(user);
+        //Generate refresh token
+         const  refreshToken = authController.generateRefreshToken(user);
+        res.cookie("refreshToken", refreshToken, {
+          httpOnly: true,
+          secure: false,
+          path: "/",
+          sameSite: "strict",
+        });
+
+        //Hidden password
+        const { password, ...others } = user._doc;
+
+        if (type === 0) {
+          return res
+            .status(200)
+            .json({ ...others, accessToken, refreshToken });
+        } else {
+          return res
+            .status(200)
+            .json({ ...others, accessToken });  // Không bao gồm refreshToken khi type khác 0
+        }
+      }
     } catch (error) {
       console.error("Đăng ký thất bại:", error);
       res.status(500).json({ error: "Server signup error" });
@@ -83,15 +105,19 @@ const authController = {
 
   login: async (req, res) => {
     try {
-      const { email, phone, password } = req.body;
+      const { email, phone, password, type } = req.body;
       let user;
 
       if (email) {
         user = await User.findOne({ email: email });
-      } else {
+      } else if (phone) {
         user = await User.findOne({ phone: phone });
+      } else {
+        return res
+          .status(400)
+          .send({ message: "Please provide either email or phone." });
       }
-      if (!user) {
+      if (user.type !== type) {
         return res.status(401).json({ error: "User not found" });
       }
       const isMatch = bcrypt.compareSync(password, user.password);
@@ -100,8 +126,11 @@ const authController = {
       }
       if (user && isMatch) {
         const accessToken = authController.generateAccessToken(user);
+
+
+          const refreshToken    = authController.generateRefreshToken(user);
+
         //Generate refresh token
-        const refreshToken = authController.generateRefreshToken(user);
 
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
@@ -109,12 +138,19 @@ const authController = {
           path: "/",
           sameSite: "strict",
         });
+
         //Hidden password
         const { password, ...others } = user._doc;
 
-        return res
-          .status(200)
-          .json({ user: others, accessToken, refreshToken });
+        if (type === 0) {
+          return res
+            .status(200)
+            .json({ ...others, accessToken, refreshToken });
+        } else {
+          return res
+            .status(200)
+            .json({ ...others, accessToken });  // Không bao gồm refreshToken khi type khác 0
+        }
       }
     } catch (error) {
       console.error("Đăng nhập thất bại:", error);
@@ -144,34 +180,42 @@ const authController = {
   },
 
   requestRefreshToken: async (req, res) => {
-    //Take refresh token from user
-    console.log("Cookies:", req.cookies);
+    // Lấy refresh token từ cookie
     const refreshToken = req.cookies.refreshToken;
-    //Send error if token is not valid
     if (!refreshToken) return res.status(401).json("You're not authenticated");
-    if (!refreshTokens.includes(refreshToken)) {
+
+    // Kiểm tra token trong danh sách
+    if (refreshTokens.includes(refreshToken)) {
       return res.status(403).json("Refresh token is not valid");
     }
 
+    // Xác thực refresh token
     jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY, (err, user) => {
       if (err) {
-        console.log(err);
-        return res.status(500).json({ error: "Internal Server Error" });
+        return res.status(403).json("Token verification failed");
       }
+
+      // Loại bỏ refresh token cũ và tạo refresh token mới
       refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
-      //create new access token, refresh token and send to user
+
       const newAccessToken = authController.generateAccessToken(user);
       const newRefreshToken = authController.generateRefreshToken(user);
+
+      // Thêm refresh token mới vào danh sách
       refreshTokens.push(newRefreshToken);
-      res.cookie("refreshToken", refreshToken, {
+
+      // Lưu lại refresh token mới vào cookie
+      res.cookie("refreshToken", newRefreshToken, {
+        // Cập nhật refresh token mới
         httpOnly: true,
-        secure: false,
+        secure: false, // Đặt thành true nếu dùng HTTPS
         path: "/",
         sameSite: "strict",
       });
+
+      // Trả về access token mới
       return res.status(200).json({
         accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
       });
     });
   },
@@ -183,6 +227,12 @@ const authController = {
     } catch (error) {
       res.status(500).json({ error: "Server getUser error" });
     }
+  },
+
+  logOut: async (req, res) => {
+    //Clear cookies when user logs out
+    res.clearCookie("refreshToken");
+    res.status(200).json("Logged out successfully!");
   },
 };
 module.exports = authController;
