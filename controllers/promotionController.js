@@ -48,15 +48,12 @@ const promotionCOntroller = {
       // Tạo mã khuyến mãi mới
       const lastPromotion = await Promotion.findOne().sort({ promotionId: -1 });
 
-      let newCode = "KM01";
-      if (lastPromotion) {
-        const lastCodeNumber = parseInt(lastPromotion.code.substring(2));
-
-        const nextCodeNumber = lastCodeNumber + 1;
-
-        newCode =
-          nextCodeNumber < 10 ? `KM0${nextCodeNumber}` : `KM${nextCodeNumber}`;
-      }
+      // Định dạng mã theo kiểu "KMYYYY-MM-DD"
+      const today = new Date(startDate);
+      const year = today.getFullYear();
+      const month = (today.getMonth() + 1).toString().padStart(2, '0'); // Tháng 2 chữ số
+      const day = today.getDate().toString().padStart(2, '0'); // Ngày 2 chữ số
+      const newCode = `KM${year}-${month}-${day}`;
 
       const promotion = new Promotion({
         code: newCode,
@@ -171,6 +168,26 @@ const promotionCOntroller = {
       return res.status(200).send(promotion); // Trả về khuyến mãi đã được cập nhật
     } catch (error) {
       res.status(500).send({ message: error.message });
+    }
+  },
+
+  delete: async (req, res) => {
+    try {
+      const { code } = req.params;
+      const promotion = await Promotion.findOne({ code: code });
+
+      if (!promotion) {
+        return res.status(404).json({ message: "promotion not found" });
+      }
+
+      const deleteDetail = await Promotion.delete({ code: code });
+
+      return res.status(200).json({
+        message: "promotion deleted successfully",
+        data: deleteDetail,
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
   },
 };

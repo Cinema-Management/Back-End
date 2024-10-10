@@ -74,20 +74,42 @@ const promotionLineController = {
       }
 
       // Tạo mã cho dòng khuyến mãi mới
-      const lastPromotion = await PromotionLine.findOne().sort({
-        promotionLineId: -1,
-      });
+  // Tạo prefix dựa trên loại khuyến mãi
+  let prefix;
+  if (type === 0) {
+    prefix = "KMH"; // Kiểu khuyến mãi tặng hàng
+  } else if (type === 1) {
+    prefix = "KMT"; // Kiểu khuyến mãi giảm giá cố định
+  } else if (type === 2) {
+    prefix = "CKHD"; // Kiểu khuyến mãi giảm giá theo phần trăm
+  } else {
+    return res.status(400).send({ message: "Invalid promotion type." });
+  }
 
-      let newCode = "DKM01";
-      if (lastPromotion) {
-        const lastCodeNumber = parseInt(lastPromotion.code.substring(3));
-        const nextCodeNumber = lastCodeNumber + 1;
-        newCode =
-          nextCodeNumber < 10
-            ? `DKM0${nextCodeNumber}`
-            : `DKM${nextCodeNumber}`;
-      }
+  // Lấy ngày hiện tại theo định dạng YYYY-MM-DD
+  const today = new Date();
+  const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
 
+  // Lấy tất cả tài liệu bao gồm cả đã xóa
+  const allPromotionDetails = await PromotionLine.findWithDeleted();
+
+  // Tìm mã mới
+  let newCode = `${prefix}${formattedDate}-1`; // Bắt đầu với 1
+  let existingCodes = new Set();
+
+  // Thu thập các mã đã tồn tại
+  allPromotionDetails.forEach((detail) => {
+    if (detail.code.startsWith(`${prefix}${formattedDate}-`)) {
+      existingCodes.add(detail.code);
+    }
+  });
+
+  // Tăng số thứ tự nếu mã đã tồn tại
+  let lastCodeNumber = 1;
+  while (existingCodes.has(newCode)) {
+    lastCodeNumber++;
+    newCode = `${prefix}${formattedDate}-${lastCodeNumber}`;
+  }
       // Tạo mới dòng khuyến mãi
       const promotionLines = new PromotionLine({
         code: newCode,
@@ -197,5 +219,78 @@ const promotionLineController = {
       res.status(500).json({ message: error.message });
     }
   },
+
+  delete: async (req, res) => {
+    try {
+      const { code } = req.params;
+      const promotionLine = await PromotionLine.findOne({ code: code });
+
+      if (!promotionLine) {
+        return res.status(404).json({ message: "promotionLine not found" });
+      }
+
+      const deleteDetail = await PromotionLine.delete({ code: code });
+
+      return res.status(200).json({
+        message: "promotionLine deleted successfully",
+        data: deleteDetail,
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
+  getPromotionDetailsByDateAndStatus : async (req, res) => {
+    const { date } = req.query; // Giả sử ngày được truyền qua params
+  
+    try {
+      // Chuyển đổi ngày truyền vào thành Date
+      const targetDate = new Date(date);
+  
+      // Tìm các khuyến mãi có status = 1 và ngày nằm trong khoảng startDate và endDate
+      const promotions = await Promotion.find({
+        // status: 1,
+        startDate: { $lte: targetDate },
+        endDate: { $gte: targetDate },
+      });
+      // console.log(promotions);
+  
+      // Nếu không tìm thấy khuyến mãi nào
+      if (promotions.length === 0) {
+        return res.status(404).json({ message: "No promotions found." });
+      }
+  
+      // Lấy mã khuyến mãi từ các khuyến mãi tìm được
+      const promotionCodes = promotions.map((promo) => promo.code);
+  
+      // Tìm các dòng khuyến mãi có promotionCode nằm trong danh sách đã tìm được
+      const promotionLines = await PromotionLine.find({
+        promotionCode: { $in: promotionCodes },
+        status: 1,
+      });
+      console.log(promotionLines.length);
+
+  
+      // Nếu không tìm thấy dòng khuyến mãi nào
+      if (promotionLines.length === 0) {
+        return res.status(404).json({ message: "No promotion lines found." });
+      }
+  
+      // Lấy mã dòng khuyến mãi từ các dòng khuyến mãi tìm được
+      const promotionLineCodes = promotionLines.map((line) => line.code);
+  
+      // Tìm tất cả chi tiết khuyến mãi liên quan đến các dòng khuyến mãi
+      const promotionDetails = await PromotionDetail.find({
+        promotionLineCode: { $in: promotionLineCodes },
+      });
+  
+      // Trả về danh sách chi tiết khuyến mãi
+      return res.status(200).json(promotionDetails);
+    } catch (error) {
+      console.error("Error fetching promotion details:", error);
+      return res.status(500).json({ message: "Internal server error." });
+    }
+  },
+  
 };
 module.exports = promotionLineController;
