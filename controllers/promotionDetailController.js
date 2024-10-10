@@ -1,5 +1,7 @@
 const Product = require("../models/Product");
+const Promotion = require("../models/Promotion");
 const PromotionDetail = require("../models/PromotionDetail ");
+const PromotionLine = require("../models/PromotionLine");
 const promotionDetailController = {
   getAll: async (req, res) => {
     try {
@@ -302,6 +304,84 @@ const promotionDetailController = {
       return res.status(200).send(promotionDetail);
     } catch (error) {
       res.status(500).send({ message: error.message });
+    }
+  },
+  getPromotionDetailsByDateAndStatus: async (req, res) => {
+    const { date } = req.query; // Lấy ngày từ query params
+
+    try {
+      // Chuyển đổi ngày truyền vào thành Date
+      const targetDate = new Date(date);
+
+      // Tìm các khuyến mãi có status = 1 và ngày nằm trong khoảng startDate và endDate
+      const promotions = await Promotion.find({
+        startDate: { $lte: targetDate },
+        endDate: { $gte: targetDate },
+      });
+
+      // Nếu không tìm thấy khuyến mãi nào
+      if (promotions.length === 0) {
+        return res.status(200).json([]); // Trả về mảng rỗng
+      }
+
+      // Lấy mã khuyến mãi từ các khuyến mãi tìm được
+      const promotionCodes = promotions.map((promo) => promo.code);
+
+      // Tìm các dòng khuyến mãi có promotionCode nằm trong danh sách đã tìm được
+      // và có ngày nằm trong khoảng startDate và endDate của dòng khuyến mãi
+      const promotionLines = await PromotionLine.find({
+        promotionCode: { $in: promotionCodes },
+        status: 1,
+        startDate: { $lte: targetDate },
+        endDate: { $gte: targetDate },
+      });
+
+      // Nếu không tìm thấy dòng khuyến mãi nào
+      if (promotionLines.length === 0) {
+        return res.status(200).json([]); // Trả về mảng rỗng
+      }
+
+      // Lấy mã dòng khuyến mãi từ các dòng khuyến mãi tìm được
+      const promotionLineCodes = promotionLines.map((line) => line.code);
+
+      // Tìm tất cả chi tiết khuyến mãi liên quan đến các dòng khuyến mãi
+      const promotionDetails = await PromotionDetail.find({
+        promotionLineCode: { $in: promotionLineCodes },
+      });
+
+      // Nếu không có chi tiết khuyến mãi
+      if (promotionDetails.length === 0) {
+        return res.status(200).json([]); // Trả về mảng rỗng
+      }
+
+      // Nếu có chi tiết khuyến mãi có type = 0, lấy tên sản phẩm
+      const promotionDetailsWithProducts = await Promise.all(
+        promotionDetails.map(async (detail) => {
+          const result = { ...detail.toObject() }; // Chuyển Mongoose Document thành Object
+
+          if (detail.type === 0) {
+            // Tìm sản phẩm bán
+            const productSales = await Product.findOne({
+              code: detail.salesProductCode,
+            });
+            result.nameProductSales = productSales ? productSales.name : null;
+
+            // Tìm sản phẩm tặng
+            const productFree = await Product.findOne({
+              code: detail.freeProductCode,
+            });
+            result.nameProductFree = productFree ? productFree.name : null;
+          }
+
+          return result; // Trả về chi tiết khuyến mãi kèm tên sản phẩm
+        })
+      );
+
+      // Trả về danh sách chi tiết khuyến mãi cùng với tên sản phẩm
+      return res.status(200).json(promotionDetailsWithProducts);
+    } catch (error) {
+      console.error("Error fetching promotion details:", error);
+      return res.status(500).json({ message: "Internal server error." });
     }
   },
 };
