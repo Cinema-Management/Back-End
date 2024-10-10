@@ -554,6 +554,29 @@ const priceController = {
       res.status(400).json({ message: error.message });
     }
   },
+  updateDetail: async (req, res) => {
+    try {
+      const { price, description } = req.body;
+      const priceDetailCode = req.params.code;
+
+      const priceDetail = await PriceDetail.findOne({ code: priceDetailCode });
+      if (!priceDetail) {
+        return res.status(404).send({ message: "Price detail not found" });
+      }
+
+      if (price && price !== priceDetail.price) {
+        priceDetail.price = price;
+      }
+      if (description && description !== priceDetail.description) {
+        priceDetail.description = description;
+      }
+
+      await priceDetail.save();
+      return res.status(200).send(priceDetail);
+    } catch (error) {
+      res.status(500).send({ message: error.message });
+    }
+  },
 };
 
 module.exports = priceController;

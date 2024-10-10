@@ -7,6 +7,7 @@ router.post("/addPriceDetailSeat", priceController.addPriceDetailSeat);
 router.post("/addPriceDetailProduct", priceController.addPriceDetailFood);
 router.post("/:code", priceController.update);
 router.post("/updateStatus/:code", priceController.updateStatus);
+router.post("/updateDetail/:code", priceController.updateDetail);
 router.get("/getPrice", priceController.getPriceDetails);
 router.get("/getPriceDetailsFood", priceController.getPriceDetailsFood);
 router.get("/getAllPriceFood", priceController.getAllPriceFood);
