@@ -6,6 +6,10 @@ router.get(
   "/getAllByPromotionLineCode/:code",
   promotionDetailController.getAllByPromotionLineCode
 );
+router.get(
+  "/getPromotionDetailsByDateAndStatus",
+  promotionDetailController.getPromotionDetailsByDateAndStatus
+);
 
 router.post("/", promotionDetailController.add);
 router.put("/:code", promotionDetailController.update);
