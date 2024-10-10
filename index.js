@@ -28,6 +28,7 @@ const salesInvoiceRoute = require("./routes/salesInvoiceRoute");
 const salesInvoiceDetailRoute = require("./routes/salesInvoiceDetailRoute");
 const seatStatusInScheduleRoute = require("./routes/seatStatusInScheduleRoute");
 const promotionDetailRoute = require("./routes/promotionDetailRoute");
+const cookieParser = require("cookie-parser");
 
 mongoose
   .connect(dbURI)
@@ -45,6 +46,8 @@ app.use(
     methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );
+app.use(cookieParser());
+
 //routes
 app.use("/api/movie-genres", movieGenreRoute);
 app.use("/api/movies", movieRoute);
