@@ -86,9 +86,25 @@ const promotionLineController = {
         return res.status(400).send({ message: "Invalid promotion type." });
       }
 
-      // Lấy ngày hiện tại theo định dạng YYYY-MM-DD
-      const today = new Date();
-      const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
+      let targetDate = new Date(startDateNew);
+
+      // Lùi 7 giờ để chuyển từ giờ Việt Nam về UTC (tránh dùng Date.UTC vì dữ liệu đã lưu dưới dạng UTC)
+      const vietnamTimezoneOffset = 7 * 60; // Phút (-7 giờ)
+      targetDate = new Date(
+        targetDate.getTime() + vietnamTimezoneOffset * 60 * 1000
+      ); // Lùi 7 giờ về UTC
+
+      // Tạo startOfDay và endOfDay dựa trên giờ UTC (đã lùi 7 giờ từ giờ Việt Nam)
+      const startOfDay = new Date(
+        targetDate.getFullYear(),
+        targetDate.getMonth(),
+        targetDate.getDate(),
+        0,
+        0,
+        0
+      ); // 00:00:00 giờ UTC
+
+      const formattedDate = targetDate.toISOString().split("T")[0]; // YYYY-MM-DD
 
       // Lấy tất cả tài liệu bao gồm cả đã xóa
       const allPromotionDetails = await PromotionLine.findWithDeleted();
