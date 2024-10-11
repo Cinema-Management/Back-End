@@ -86,9 +86,12 @@ const promotionDetailController = {
       } else {
         return res.status(400).send({ message: "Invalid promotion type." });
       }
+      const promotionLine = await PromotionLine.findOne({
+        code: promotionLineCode,
+      });
 
       // Lấy ngày hiện tại theo định dạng YYYY-MM-DD
-      const today = new Date();
+      const today = new Date(promotionLine.startDate);
       const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
 
       // Lấy tất cả tài liệu bao gồm cả đã xóa
@@ -310,13 +313,37 @@ const promotionDetailController = {
     const { date } = req.query; // Lấy ngày từ query params
 
     try {
-      // Chuyển đổi ngày truyền vào thành Date
-      const targetDate = new Date(date);
+      let targetDate = new Date(date);
+
+      // Lùi 7 giờ để chuyển từ giờ Việt Nam về UTC (tránh dùng Date.UTC vì dữ liệu đã lưu dưới dạng UTC)
+      const vietnamTimezoneOffset = -7 * 60; // Phút (-7 giờ)
+      targetDate = new Date(
+        targetDate.getTime() + vietnamTimezoneOffset * 60 * 1000
+      ); // Lùi 7 giờ về UTC
+
+      // Tạo startOfDay và endOfDay dựa trên giờ UTC (đã lùi 7 giờ từ giờ Việt Nam)
+      const startOfDay = new Date(
+        targetDate.getFullYear(),
+        targetDate.getMonth(),
+        targetDate.getDate(),
+        0,
+        0,
+        0
+      ); // 00:00:00 giờ UTC
+
+      const endOfDay = new Date(
+        targetDate.getFullYear(),
+        targetDate.getMonth(),
+        targetDate.getDate(),
+        0,
+        0,
+        0
+      ); // 23:59:59 giờ UTC
 
       // Tìm các khuyến mãi có status = 1 và ngày nằm trong khoảng startDate và endDate
       const promotions = await Promotion.find({
-        startDate: { $lte: targetDate },
-        endDate: { $gte: targetDate },
+        startDate: { $lte: startOfDay },
+        endDate: { $gte: endOfDay },
       });
 
       // Nếu không tìm thấy khuyến mãi nào
@@ -332,8 +359,8 @@ const promotionDetailController = {
       const promotionLines = await PromotionLine.find({
         promotionCode: { $in: promotionCodes },
         status: 1,
-        startDate: { $lte: targetDate },
-        endDate: { $gte: targetDate },
+        startDate: { $lte: startOfDay },
+        endDate: { $gte: endOfDay },
       });
 
       // Nếu không tìm thấy dòng khuyến mãi nào
