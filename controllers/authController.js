@@ -76,7 +76,7 @@ const authController = {
       if (user) {
         const accessToken = authController.generateAccessToken(user);
         //Generate refresh token
-         const  refreshToken = authController.generateRefreshToken(user);
+        const refreshToken = authController.generateRefreshToken(user);
         res.cookie("refreshToken", refreshToken, {
           httpOnly: true,
           secure: false,
@@ -88,13 +88,9 @@ const authController = {
         const { password, ...others } = user._doc;
 
         if (type === 0) {
-          return res
-            .status(200)
-            .json({ ...others, accessToken, refreshToken });
+          return res.status(200).json({ ...others, accessToken, refreshToken });
         } else {
-          return res
-            .status(200)
-            .json({ ...others, accessToken });  // Không bao gồm refreshToken khi type khác 0
+          return res.status(200).json({ ...others, accessToken }); // Không bao gồm refreshToken khi type khác 0
         }
       }
     } catch (error) {
@@ -127,8 +123,7 @@ const authController = {
       if (user && isMatch) {
         const accessToken = authController.generateAccessToken(user);
 
-
-          const refreshToken    = authController.generateRefreshToken(user);
+        const refreshToken = authController.generateRefreshToken(user);
 
         //Generate refresh token
 
@@ -143,13 +138,9 @@ const authController = {
         const { password, ...others } = user._doc;
 
         if (type === 0) {
-          return res
-            .status(200)
-            .json({ ...others, accessToken, refreshToken });
+          return res.status(200).json({ ...others, accessToken, refreshToken });
         } else {
-          return res
-            .status(200)
-            .json({ ...others, accessToken });  // Không bao gồm refreshToken khi type khác 0
+          return res.status(200).json({ ...others, accessToken }); // Không bao gồm refreshToken khi type khác 0
         }
       }
     } catch (error) {
@@ -165,7 +156,7 @@ const authController = {
         isAdmin: user.isAdmin,
       },
       process.env.JWT_ACCESS_KEY,
-      { expiresIn: "20s" }
+      { expiresIn: "100d" }
     );
   },
   generateRefreshToken: (user) => {
