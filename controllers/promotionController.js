@@ -46,13 +46,12 @@ const promotionCOntroller = {
       }
 
       // Tạo mã khuyến mãi mới
-      const lastPromotion = await Promotion.findOne().sort({ promotionId: -1 });
 
       // Định dạng mã theo kiểu "KMYYYY-MM-DD"
       const today = new Date(startDate);
       const year = today.getFullYear();
-      const month = (today.getMonth() + 1).toString().padStart(2, '0'); // Tháng 2 chữ số
-      const day = today.getDate().toString().padStart(2, '0'); // Ngày 2 chữ số
+      const month = (today.getMonth() + 1).toString().padStart(2, "0"); // Tháng 2 chữ số
+      const day = today.getDate().toString().padStart(2, "0"); // Ngày 2 chữ số
       const newCode = `KM${year}-${month}-${day}`;
 
       const promotion = new Promotion({
