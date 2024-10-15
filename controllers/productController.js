@@ -132,18 +132,61 @@ const productController = {
 
   getAllSeatsByRoomCode: async (req, res) => {
     try {
-      const { roomCode } = req.params; // Get roomCode from request params
+      const { roomCode } = req.params; // Nhận mã phòng từ params
 
-      // Find products where roomCode matches and type represents seats (assuming type field is used for differentiation)
-      const seats = await Product.find({ roomCode, type: 0 }); // Assuming type=1 represents seats
+      // Tìm tất cả sản phẩm theo mã roomCode và type đại diện cho ghế ngồi (giả sử type = 0 là ghế)
+      const productsWithStatus = await Product.aggregate([
+        {
+          // Bước 1: Lọc sản phẩm theo roomCode và type = 0 (ghế)
+          $match: {
+            roomCode: roomCode,
+            type: 0,
+          },
+        },
+        {
+          // Bước 2: Kết hợp với bảng SeatStatusInSchedule dựa trên mã sản phẩm
+          $lookup: {
+            from: "seat_status_in_schedules", // Tên bảng SeatStatusInSchedule
+            localField: "code", // Trường trong Product
+            foreignField: "productCode", // Trường liên kết trong SeatStatusInSchedule
+            as: "seatStatus", // Tên trường sau khi kết hợp
+          },
+        },
+        {
+          // Bước 3: Tính toán lại trạng thái của ghế
+          $project: {
+            code: 1, // Giữ mã sản phẩm
+            name: 1, // Giữ tên sản phẩm
+            seatNumber: 1, // Giữ số ghế
+            image: 1, // Giữ hình ảnh
+            status: 1,
+            seatStatus: {
+              $cond: {
+                if: {
+                  // Kiểm tra xem có bất kỳ status nào khác 1 không
+                  $anyElementTrue: {
+                    $map: {
+                      input: "$seatStatus", // Mảng seatStatus
+                      as: "statusItem",
+                      in: { $ne: ["$$statusItem.status", 1] }, // Trả về true nếu khác 1
+                    },
+                  },
+                },
+                then: 1, // Nếu có status nào khác 1, trả về 1 đã có suất chiếu
+                else: 0, // Nếu tất cả đều là 1, trả về 1 chưa có suất chiếu
+              },
+            },
+          },
+        },
+      ]);
 
-      if (!seats || seats.length === 0) {
+      if (!productsWithStatus || productsWithStatus.length === 0) {
         return res
           .status(404)
           .json({ message: "No seats found for this room." });
       }
 
-      return res.status(200).json(seats);
+      return res.status(200).json(productsWithStatus);
     } catch (error) {
       return res
         .status(500)
@@ -442,7 +485,7 @@ const productController = {
   updateCombo: async (req, res) => {
     try {
       const productCode = req.params.code;
-      const { name, description, comboItems, type } = req.body;
+      const { name, description, comboItems, type, status } = req.body;
       const product = await Product.findOne({ code: productCode });
       if (!product) {
         return res.status(404).send({ message: "Product not found" });
@@ -519,6 +562,9 @@ const productController = {
       if (type && type !== product.type) {
         product.type = type;
       }
+      if (status && status !== product.status) {
+        product.status = status;
+      }
 
       await product.save();
       return res.status(201).json(product);
@@ -530,8 +576,16 @@ const productController = {
   update: async (req, res) => {
     try {
       const productCode = req.params.code;
-      const { name, description, roomCode, row, column, comboItems, type } =
-        req.body;
+      const {
+        name,
+        description,
+        roomCode,
+        row,
+        column,
+        comboItems,
+        type,
+        status,
+      } = req.body;
 
       const product = await Product.findOne({ code: productCode });
       if (!product) {
@@ -614,6 +668,9 @@ const productController = {
       }
       if (type && type !== product.type) {
         product.type = type;
+      }
+      if (status && status !== product.status) {
+        product.status = status;
       }
       await product.save();
       res.json(product);
@@ -706,6 +763,30 @@ const productController = {
       res.json(products);
     } catch (error) {
       res.status(400).json({ message: error.message });
+    }
+  },
+  deleteSeatByRoomCode: async (req, res) => {
+    try {
+      const { roomCode } = req.params; // Lấy roomCode từ req.params
+
+      // Tìm tất cả các sản phẩm có roomCode tương ứng
+      const products = await Product.find({ roomCode: roomCode });
+
+      if (products.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "No products found for this roomCode" });
+      }
+
+      // Xóa tất cả các sản phẩm có roomCode tương ứng và status = 0
+      const deletedProducts = await Product.deleteMany({ roomCode: roomCode });
+
+      return res.status(200).json({
+        message: "All products with this roomCode deleted successfully",
+        data: deletedProducts,
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
   },
 };
