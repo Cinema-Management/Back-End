@@ -176,9 +176,9 @@ const authController = {
     if (!refreshToken) return res.status(401).json("You're not authenticated");
 
     // Kiểm tra token trong danh sách
-    if (refreshTokens.includes(refreshToken)) {
-      return res.status(403).json("Refresh token is not valid");
-    }
+    // if (!refreshTokens.includes(refreshToken)) {
+    //   return res.status(403).json("Refresh token is not valid");
+    // }
 
     // Xác thực refresh token
     jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY, (err, user) => {
@@ -221,7 +221,6 @@ const authController = {
   },
 
   logOut: async (req, res) => {
-    //Clear cookies when user logs out
     res.clearCookie("refreshToken");
     res.status(200).json("Logged out successfully!");
   },
