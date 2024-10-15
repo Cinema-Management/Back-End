@@ -48,13 +48,15 @@ const priceController = {
             "The end date must be greater than or equal to the start date",
         });
       }
-
-      const lastPrice = await Price.findOne().sort({
-        priceId: -1,
-      });
+      // Lấy Price cuối cùng dựa trên priceId, bao gồm cả những Price đã bị xóa mềm
+      const lastPriceArray = await Price.findWithDeleted()
+        .sort({ priceId: -1 })
+        .limit(1)
+        .lean();
+      const lastPrice = lastPriceArray[0];
 
       let newCode = "BG01";
-      if (lastPrice) {
+      if (lastPrice && lastPrice.code) {
         const lastCodeNumber = parseInt(lastPrice.code.substring(2));
 
         const nextCodeNumber = lastCodeNumber + 1;
@@ -108,12 +110,14 @@ const priceController = {
         });
       }
 
-      const lastPrice = await Price.findOne().sort({
-        priceId: -1,
-      });
+      const lastPriceArray = await Price.findWithDeleted()
+        .sort({ priceId: -1 })
+        .limit(1)
+        .lean();
+      const lastPrice = lastPriceArray[0];
 
       let newCode = "BG01";
-      if (lastPrice) {
+      if (lastPrice && lastPrice.code) {
         const lastCodeNumber = parseInt(lastPrice.code.substring(2));
 
         const nextCodeNumber = lastCodeNumber + 1;
@@ -150,14 +154,11 @@ const priceController = {
         timeSlot,
       } = req.body;
       const priceCode = req.params.code;
-      console.log(priceCode);
+
       const price = await Price.findOne({ code: priceCode });
       if (!price) {
         return res.status(404).send({ message: "Price not found" });
       }
-
-      console.log(startDate);
-      console.log(endDate);
 
       if (price.status === 1) {
         const currentDate = new Date();
@@ -209,6 +210,7 @@ const priceController = {
       }
 
       await price.save();
+      console.log(price);
       return res.status(200).send(price);
     } catch (error) {
       res.status(500).send({ message: error.message });
@@ -244,6 +246,11 @@ const priceController = {
           foreignField: "code",
         })
         .populate({
+          path: "priceCode",
+          select: "name code status",
+          foreignField: "code",
+        })
+        .populate({
           path: "productTypeCode",
           select: "name code",
           foreignField: "code",
@@ -253,11 +260,13 @@ const priceController = {
           select: "name code",
           foreignField: "code",
         })
+
         .lean();
+
       // Gộp chi tiết giá với bảng giá
       const pricesWithDetails = prices.map((price) => {
         const details = priceDetails.filter(
-          (detail) => detail.priceCode === price.code
+          (detail) => detail.priceCode.code === price.code
         );
 
         return {
@@ -287,6 +296,66 @@ const priceController = {
       return res
         .status(200)
         .send({ message: "All records deleted successfully." });
+    } catch (error) {
+      return res.status(500).send({ message: error.message });
+    }
+  },
+
+  deletePrice: async (req, res) => {
+    try {
+      const priceCode = req.params.code;
+      const price = await Price.findOne({
+        code: priceCode,
+      });
+      if (!price) {
+        return res.status(404).send({
+          message: "Price not found",
+        });
+      }
+
+      console.log(priceCode);
+      if (price.status === 1) {
+        return res.status(400).send({
+          message: "Price is active, cannot be deleted",
+        });
+      }
+      await PriceDetail.deleteMany({
+        priceCode: priceCode,
+      });
+
+      await price.delete({ code: priceCode });
+      return res.status(200).send({ message: "Price deleted successfully" });
+    } catch (error) {
+      return res.status(500).send({ message: error.message });
+    }
+  },
+  deleteDetail: async (req, res) => {
+    try {
+      const priceDetailCode = req.params.code;
+      const priceDetail = await PriceDetail.findOne({
+        code: priceDetailCode,
+      }).populate({
+        path: "priceCode",
+        select: "status",
+        foreignField: "code",
+      });
+
+      console.log(priceDetail);
+      if (!priceDetail) {
+        return res.status(404).send({
+          message: "Price detail not found",
+        });
+      }
+      if (priceDetail.priceCode.status === 1) {
+        return res.status(400).send({
+          message: "Price is active, cannot be deleted",
+        });
+      }
+
+      await priceDetail.delete({ code: priceDetailCode });
+      return res
+        .status(200)
+        .send({ message: "Price detail deleted successfully" });
     } catch (error) {
       return res.status(500).send({ message: error.message });
     }
@@ -326,12 +395,16 @@ const priceController = {
         });
       }
 
-      const lastPriceDetail = await PriceDetail.findOne().sort({
-        priceDetailId: -1,
-      });
+      const lastPriceDetailArray = await PriceDetail.findWithDeleted()
+        .sort({
+          priceDetailId: -1,
+        })
+        .limit(1)
+        .lean();
 
+      const lastPriceDetail = lastPriceDetailArray[0];
       let newCode = "CTBG01";
-      if (lastPriceDetail) {
+      if (lastPriceDetail && lastPriceDetail.code) {
         const lastCodeNumber = parseInt(lastPriceDetail.code.substring(4));
 
         const nextCodeNumber = lastCodeNumber + 1;
@@ -394,12 +467,16 @@ const priceController = {
         });
       }
 
-      const lastPriceDetail = await PriceDetail.findOne().sort({
-        priceDetailId: -1,
-      });
+      const lastPriceDetailArray = await PriceDetail.findWithDeleted()
+        .sort({
+          priceDetailId: -1,
+        })
+        .limit(1)
+        .lean();
 
+      const lastPriceDetail = lastPriceDetailArray[0];
       let newCode = "CTBG01";
-      if (lastPriceDetail) {
+      if (lastPriceDetail && lastPriceDetail.code) {
         const lastCodeNumber = parseInt(lastPriceDetail.code.substring(4));
 
         const nextCodeNumber = lastCodeNumber + 1;
@@ -510,7 +587,7 @@ const priceController = {
   getAllPriceFood: async (req, res) => {
     try {
       // Bước 1: Tìm các sản phẩm không phải ghế
-      const products = await Product.find({ type: { $ne: 0 } });
+      const products = await Product.find({ type: { $ne: 0 }, status: 1 });
       console.log(`Số lượng sản phẩm không phải ghế: ${products.length}`);
 
       // Bước 2: Lấy ngày hiện tại
@@ -547,9 +624,12 @@ const priceController = {
           image: product ? product.image : null, // Thêm ảnh sản phẩm nếu tìm thấy
         };
       });
+      const resultPriceFilter = resultPrice.filter(
+        (item) => item.productName !== null
+      );
 
       // Bước 7: Gửi kết quả về client
-      res.json(resultPrice);
+      res.json(resultPriceFilter);
     } catch (error) {
       res.status(400).json({ message: error.message });
     }
