@@ -14,4 +14,7 @@ router.get("/getAllPriceFood", priceController.getAllPriceFood);
 router.get("/", priceController.getAll);
 router.delete("/delete", priceController.deleteAll);
 router.delete("/deleteDetail", priceController.deleteAllDetail);
+router.delete("/deletePrice/:code", priceController.deletePrice);
+router.delete("/deletePriceDetail/:code", priceController.deleteDetail);
+
 module.exports = router;
