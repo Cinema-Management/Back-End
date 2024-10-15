@@ -137,10 +137,10 @@ const roomController = {
       return res.status(500).send({ error: error.message });
     }
   },
-
   update: async (req, res) => {
     try {
-      const { code, name, cinemaCode, roomTypeCode, status } = req.body;
+      const { code, name, cinemaCode, roomTypeCode, roomSizeCode, status } =
+        req.body;
 
       // Tìm phòng theo mã code
       const room = await Room.findOne({ code });
@@ -193,12 +193,53 @@ const roomController = {
         room.roomTypeCode = updatedRoomTypeCode;
       }
 
+      // Cập nhật roomSizeCode
+      if (roomSizeCode && roomSizeCode !== room.roomSizeCode) {
+        const roomSizeExists = await RoomSize.findOne({ code: roomSizeCode });
+        if (!roomSizeExists) {
+          return res.status(400).json({
+            message: "roomSizeCode not exist!",
+          });
+        }
+        room.roomSizeCode = roomSizeCode;
+      }
+
       // Lưu lại phòng đã cập nhật
       await room.save();
 
       return res.status(200).send(room);
     } catch (error) {
       return res.status(400).send({ error: error.message });
+    }
+  },
+  delete: async (req, res) => {
+    try {
+      const { code } = req.params; // Lấy code của cinema từ URL
+
+      // Tìm kiếm cinema theo code
+      const room = await Room.findOne({ code: code });
+
+      // Kiểm tra nếu room không tồn tại
+      if (!room) {
+        return res.status(404).json({ message: "room not found" });
+      }
+
+      // Kiểm tra trạng thái status, chỉ cho phép xóa khi status = 0
+      if (room.status !== 0) {
+        return res
+          .status(400)
+          .json({ message: "Active room cannot be deleted" });
+      }
+
+      // Xóa mềm cinema (soft delete) bằng mongoose-delete dựa trên code
+      const deletedRoom = await Room.delete({ code: code });
+
+      return res.status(200).json({
+        message: "Room deleted successfully",
+        data: deletedRoom,
+      });
+    } catch (error) {
+      return res.status(500).json({ message: "Error deleting cinema", error });
     }
   },
 };

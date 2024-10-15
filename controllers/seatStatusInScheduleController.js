@@ -84,20 +84,16 @@ const seatStatusInScheduleController = {
       if (!schedule) {
         return res.status(404).json({ message: "Schedule not found." });
       }
-      console.log(schedule);
 
       const dayOfWeek = schedule.date.getDay(); // Lấy ngày trong tuần từ date (0-6)
-      console.log("dayOfWeek", dayOfWeek);
 
       const timeSlot = determineTimeSlot(schedule.startTime, dayOfWeek); // Hàm xác định khung giờ
-      console.log("timeSlot", timeSlot);
 
       // Tìm các sản phẩm (ghế) với roomCode, type=0 (ghế)
       const seats = await Product.find({
         roomCode: schedule.roomCode,
         type: 0,
       });
-      console.log("so luong ghe", seats.length);
       if (!seats || seats.length === 0) {
         return res
           .status(404)
@@ -113,13 +109,11 @@ const seatStatusInScheduleController = {
         startDate: { $lte: schedule.date }, // startDate <= schedule.date
         endDate: { $gte: schedule.date }, // endDate >= schedule.date
       });
-      console.log("so prices", prices.length);
 
       const priceDetails = await PriceDetail.find({
         priceCode: { $in: prices.map((price) => price.code) }, // So sánh với mã giá
         roomTypeCode: schedule.screeningFormatCode, // So sánh với mã loại phòng
       });
-      console.log("so priceDetails", priceDetails.length);
 
       // Tìm trạng thái ghế từ SeatStatusInSchedule theo scheduleCode
       const seatStatuses = await SeatStatusInSchedule.find({ scheduleCode });
@@ -139,6 +133,7 @@ const seatStatusInScheduleController = {
           price: priceDetail ? priceDetail.price : 0, // Thêm giá nếu có
           priceDetailCode: priceDetail ? priceDetail.code : null, // Thêm mã giá nếu có
           status: seatStatusMap[seat.code] || null, // Thêm trạng thái từ SeatStatusInSchedule nếu có
+          statusSeat: seat.status, // Thêm trạng thái ghế từ Product
         };
       });
 
