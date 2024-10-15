@@ -207,7 +207,7 @@ const movieController = {
         movie.endDate = endDate;
       }
 
-      if (status !== undefined && status !== movie.status) {
+      if (status && status !== movie.status) {
         movie.status = status;
       }
 
