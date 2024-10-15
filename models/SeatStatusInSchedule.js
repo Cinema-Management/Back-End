@@ -6,7 +6,6 @@ const SeatStatusInScheduleSchema = new mongoose.Schema(
   {
     code: {
       type: String,
-      unique: true, // Bảo đảm mã là duy nhất
     },
     productCode: {
       type: String,
