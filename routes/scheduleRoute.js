@@ -8,8 +8,14 @@ router.get(
   scheduleController.getAllRoomsWithSchedules
 );
 
+router.get(
+  "/checkRoomHasSchedules/:roomCode",
+  scheduleController.checkRoomHasSchedules
+);
+
 router.post("/", scheduleController.add);
 router.put("/status/:code", scheduleController.updateStatus);
 router.put("/:code", scheduleController.update);
+router.delete("/:code", scheduleController.delete);
 
 module.exports = router;
