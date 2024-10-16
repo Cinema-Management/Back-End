@@ -367,12 +367,17 @@ const productController = {
     try {
       const { name, description, type } = req.body;
 
-      const lastProduct = await Product.findOne({ type: { $ne: 0 } }).sort({
-        productId: -1,
-      });
-
+      const lastProductArray = await Product.findWithDeleted({
+        type: { $ne: 0 },
+      })
+        .sort({
+          productId: -1,
+        })
+        .limit(1)
+        .lean();
+      const lastProduct = lastProductArray[0];
       let newCode = "SP01";
-      if (lastProduct) {
+      if (lastProduct && lastProduct.code) {
         const lastCodeNumber = parseInt(lastProduct.code.substring(2));
 
         const nextCodeNumber = lastCodeNumber + 1;
@@ -422,11 +427,18 @@ const productController = {
       if (existName) {
         return res.status(401).json({ message: "Sản phẩm đã tồn tại!" });
       }
-      const lastProduct = await Product.findOne({ type: { $ne: 0 } }).sort({
-        code: -1,
-      });
+
+      const lastProductArray = await Product.findWithDeleted({
+        type: { $ne: 0 },
+      })
+        .sort({
+          code: -1,
+        })
+        .limit(1)
+        .lean();
+      const lastProduct = lastProductArray[0];
       let newCode = "SP01";
-      if (lastProduct) {
+      if (lastProduct && lastProduct.code) {
         const lastCodeNumber = parseInt(lastProduct.code.substring(2));
         const nextCodeNumber = lastCodeNumber + 1;
         newCode =

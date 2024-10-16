@@ -139,6 +139,26 @@ const userController = {
       res.status(500).json({ error: "Server login error" });
     }
   },
+  forgotPassword: async (req, res) => {
+    try {
+      const { password, passwordNew, code } = req.body;
+      const user = await User.findOne({ code: code });
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const isMatch = bcrypt.compareSync(password, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ error: "Wrong password" });
+      }
+      const salt = bcrypt.genSaltSync(10);
+      const hashPassword = bcrypt.hashSync(passwordNew, salt);
+      user.password = hashPassword;
+      await user.save();
+      return res.status(200).json(user);
+    } catch (error) {
+      res.status(500).json({ error: "Server forgotPassword error" });
+    }
+  },
 
   getAllUser: async (req, res) => {
     try {

@@ -40,12 +40,14 @@ const movieController = {
           .send({ message: "One or more movie genres do not exist" });
       }
 
-      const lastMovieGenre = await Movie.findOne().sort({
-        movieId: -1,
-      });
+      const lastMovieArray = await Movie.findWithDeleted()
+        .sort({ movieId: -1 })
+        .limit(1)
+        .lean();
+      const lastMovieGenre = lastMovieArray[0];
 
       let newCode = "PHIM01";
-      if (lastMovieGenre) {
+      if (lastMovieGenre && lastMovieGenre.code) {
         const lastCodeNumber = parseInt(lastMovieGenre.code.substring(4));
 
         const nextCodeNumber = lastCodeNumber + 1;
@@ -84,6 +86,33 @@ const movieController = {
       return res.status(400).send({ error: error.message });
     }
   },
+
+  deleteMovie: async (req, res) => {
+    try {
+      const { code } = req.params;
+      const movie = await Movie.findOne({ code: code });
+
+      if (!movie) {
+        return res.status(404).json({ message: "Movie not found" });
+      }
+
+      if (movie.status !== 0) {
+        return res
+          .status(401)
+          .json({ message: "Active movie cannot be deleted" });
+      }
+
+      const deletedMovie = await Movie.delete({ code: code });
+
+      return res.status(200).json({
+        message: "Product deleted successfully",
+        data: deletedMovie,
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  },
+
   getAll: async (req, res) => {
     try {
       const movies = await Movie.find().populate({

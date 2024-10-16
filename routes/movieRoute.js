@@ -7,5 +7,5 @@ router.get("/", movieController.getAll);
 
 router.get("/:code", movieController.getByCode);
 router.put("/:code", upload.single("image"), movieController.update);
-
+router.delete("/:code", movieController.deleteMovie);
 module.exports = router;

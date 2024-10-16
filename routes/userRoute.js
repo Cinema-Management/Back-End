@@ -5,6 +5,7 @@ router.post("/signup", userController.signup);
 
 router.post("/signupStaff", userController.signupStaff);
 router.post("/login", userController.login);
+router.post("/forgotPassword", userController.forgotPassword);
 router.get("/", userController.getAllUser);
 router.get("/staff", userController.getAllStaff);
 
