@@ -160,6 +160,7 @@ const priceController = {
         return res.status(404).send({ message: "Price not found" });
       }
 
+      console.log(req.body);
       if (price.status === 1) {
         const currentDate = new Date();
         const startDateNew = new Date(startDate);
@@ -586,12 +587,12 @@ const priceController = {
 
   getAllPriceFood: async (req, res) => {
     try {
+      const { date } = req.query;
+      const currentDate = new Date(date);
       // Bước 1: Tìm các sản phẩm không phải ghế
       const products = await Product.find({ type: { $ne: 0 }, status: 1 });
-      console.log(`Số lượng sản phẩm không phải ghế: ${products.length}`);
 
       // Bước 2: Lấy ngày hiện tại
-      const currentDate = new Date();
 
       // Bước 3: Lấy tất cả các mức giá còn hiệu lực
       const prices = await Price.find({
@@ -608,7 +609,6 @@ const priceController = {
       const priceDetails = await PriceDetail.find({
         priceCode: { $in: priceCodes }, // Tìm tất cả priceDetail có priceCode trong mảng
       });
-      console.log(`Số lượng chi tiết giá: ${priceDetails.length}`);
 
       // Bước 6: Kết hợp sản phẩm với giá
       const resultPrice = priceDetails.map((priceDetail) => {
@@ -634,14 +634,32 @@ const priceController = {
       res.status(400).json({ message: error.message });
     }
   },
+
   updateDetail: async (req, res) => {
     try {
-      const { price, description } = req.body;
+      const {
+        price,
+        description,
+        productTypeCode,
+        roomTypeCode,
+        productCode,
+        type,
+      } = req.body;
       const priceDetailCode = req.params.code;
 
       const priceDetail = await PriceDetail.findOne({ code: priceDetailCode });
       if (!priceDetail) {
         return res.status(404).send({ message: "Price detail not found" });
+      }
+
+      if (productCode && productCode !== priceDetail.productCode) {
+        priceDetail.productCode = productCode;
+      }
+      if (productTypeCode && productTypeCode !== priceDetail.productTypeCode) {
+        priceDetail.productTypeCode = productTypeCode;
+      }
+      if (roomTypeCode && roomTypeCode !== priceDetail.roomTypeCode) {
+        priceDetail.roomTypeCode = roomTypeCode;
       }
 
       if (price && price !== priceDetail.price) {
