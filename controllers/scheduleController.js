@@ -5,6 +5,7 @@ const Subtitle = require("../models/Subtitle");
 const Audio = require("../models/Audio");
 const Product = require("../models/Product");
 const RoomType = require("../models/RoomType");
+const SeatStatusInSchedule = require("../models/SeatStatusInSchedule");
 
 const scheduleController = {
   add: async (req, res) => {
@@ -59,56 +60,61 @@ const scheduleController = {
 
       const end = new Date(start.getTime() + duration * 60000 + cleaningTime);
 
-      if (start >= end) {
-        return res
-          .status(400)
-          .json({ message: "Start time must be before end time" });
-      }
+      // if (start >= end) {
+      //   return res
+      //     .status(400)
+      //     .json({ message: "Start time must be before end time" });
+      // }
 
-      // Kiểm tra xem có lịch chiếu nào cùng phòng và thời gian bị trùng không
-      const conflictingSchedules = await Schedule.find({
-        roomCode,
-        date,
-        $or: [{ startTime: { $lt: end }, endTime: { $gt: start } }],
-      });
+      // // Kiểm tra xem có lịch chiếu nào cùng phòng và thời gian bị trùng không
+      // const conflictingSchedules = await Schedule.find({
+      //   roomCode,
+      //   date,
+      //   $or: [{ startTime: { $lt: end }, endTime: { $gt: start } }],
+      // });
 
-      if (conflictingSchedules.length > 0) {
-        return res.status(400).json({
-          message: "Schedule conflicts with an existing schedule in this room",
-        });
-      }
+      // if (conflictingSchedules.length > 0) {
+      //   return res.status(400).json({
+      //     message: "Schedule conflicts with an existing schedule in this room",
+      //   });
+      // }
 
-      // Lấy mã rạp từ room
-      const cinemaCode = room.cinemaCode;
+      // // Lấy mã rạp từ room
+      // const cinemaCode = room.cinemaCode;
 
-      // Kiểm tra xem có lịch chiếu của cùng 1 bộ phim trong cùng 1 rạp không
-      const conflictingMovieSchedules = await Schedule.find({
-        movieCode,
-        date,
-        roomCode: { $ne: roomCode }, // Phòng khác trong cùng rạp
-        startTime: start, // trùng thời gian
-      }).populate({
-        path: "roomCode",
-        match: { cinemaCode }, // Chỉ kiểm tra trong cùng rạp
-        model: "Room",
-        foreignField: "code",
-      });
+      // // Kiểm tra xem có lịch chiếu của cùng 1 bộ phim trong cùng 1 rạp không
+      // const conflictingMovieSchedules = await Schedule.find({
+      //   movieCode,
+      //   date,
+      //   roomCode: { $ne: roomCode }, // Phòng khác trong cùng rạp
+      //   startTime: start, // trùng thời gian
+      // }).populate({
+      //   path: "roomCode",
+      //   match: { cinemaCode }, // Chỉ kiểm tra trong cùng rạp
+      //   model: "Room",
+      //   foreignField: "code",
+      // });
 
-      if (conflictingMovieSchedules.length > 0) {
-        return res.status(400).json({
-          message:
-            "This movie is already scheduled at the same time in another room in this cinema",
-        });
-      }
+      // if (conflictingMovieSchedules.length > 0) {
+      //   return res.status(400).json({
+      //     message:
+      //       "This movie is already scheduled at the same time in another room in this cinema",
+      //   });
+      // }
 
       // Tạo mã lịch chiếu mới
-      const lastScheduleType = await Schedule.findOne().sort({
-        scheduleId: -1,
-      });
+
+      const lastPriceArray = await Schedule.findWithDeleted()
+        .sort({ scheduleId: -1 })
+        .limit(1)
+        .lean();
+      const lastPrice = lastPriceArray[0];
       let newCode = "SC01";
-      if (lastScheduleType) {
-        const lastCodeNumber = parseInt(lastScheduleType.code.substring(2));
+      if (lastPrice && lastPrice.code) {
+        const lastCodeNumber = parseInt(lastPrice.code.substring(2));
+
         const nextCodeNumber = lastCodeNumber + 1;
+
         newCode =
           nextCodeNumber < 10 ? `SC0${nextCodeNumber}` : `SC${nextCodeNumber}`;
       }
@@ -122,7 +128,7 @@ const scheduleController = {
         subtitleCode,
         audioCode,
         date,
-        startTime,
+        startTime: start,
         endTime: end,
       });
 
@@ -399,6 +405,62 @@ const scheduleController = {
         message: "An error occurred while updating the status",
         error: error.message,
       });
+    }
+  },
+
+  checkRoomHasSchedules: async (req, res) => {
+    try {
+      const { roomCode } = req.params; // Lấy mã phòng từ params
+
+      // Lấy ngày hiện tại
+      const currentDate = new Date().toISOString().split("T")[0]; // Format ngày dưới dạng YYYY-MM-DD
+
+      // Tìm lịch chiếu cho phòng theo mã và ngày hiện tại
+      const schedules = await Schedule.find({
+        roomCode: roomCode,
+        date: currentDate,
+      });
+
+      // Nếu không có lịch chiếu, trả về phản hồi không có lịch chiếu
+      if (schedules.length === 0) {
+        return res.status(200).json({
+          hasSchedules: false,
+          message: "No schedules found for this room today.",
+        });
+      }
+
+      // Nếu có lịch chiếu, trả về phản hồi có lịch chiếu
+      return res.status(200).json({
+        hasSchedules: true,
+        message: "Schedules found for this room today.",
+      });
+    } catch (error) {
+      console.error("Error checking room schedules:", error);
+      return res.status(500).json({ message: "Internal server error", error });
+    }
+  },
+
+  delete: async (req, res) => {
+    try {
+      const { code } = req.params;
+      const schedule = await Schedule.findOne({ code: code });
+
+      if (!schedule) {
+        return res.status(404).json({ message: "schedule not found" });
+      }
+
+      const deleteSchedule = await Schedule.delete({ code: code });
+      const deleteSeatStatus = await SeatStatusInSchedule.deleteMany({
+        scheduleCode: code,
+      });
+
+      return res.status(200).json({
+        message: "Schedule deleted successfully",
+        dataSchedule: deleteSchedule,
+        dataSeatStatus: deleteSeatStatus,
+      });
+    } catch (error) {
+      res.status(500).json({ message: error.message });
     }
   },
 };
