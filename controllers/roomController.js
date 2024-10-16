@@ -83,7 +83,7 @@ const roomController = {
   getAllByCode: async (req, res) => {
     try {
       const { code } = req.params;
-      const rooms = await Room.find({ code: code });
+      const rooms = await Room.findOne({ code: code });
       return res.status(200).send(rooms);
     } catch (error) {
       return res.status(500).send({ error: error.message });
