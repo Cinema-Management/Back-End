@@ -160,12 +160,22 @@ const priceController = {
         return res.status(404).send({ message: "Price not found" });
       }
 
-      console.log(req.body);
       if (price.status === 1) {
         const currentDate = new Date();
         const startDateNew = new Date(startDate);
         const endDateNew = new Date(endDate);
-        if (endDateNew < startDateNew) {
+        const currentDay = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth(),
+          currentDate.getDate()
+        );
+        const endDay = new Date(
+          endDateNew.getFullYear(),
+          endDateNew.getMonth(),
+          endDateNew.getDate()
+        );
+
+        if (endDay < currentDay) {
           return res.status(400).send({
             message:
               "The end date must be greater than or equal to the start date",
