@@ -14,6 +14,6 @@ router.get(
 router.post("/", promotionDetailController.add);
 router.put("/:code", promotionDetailController.update);
 
-router.delete("/:code", promotionDetailController.delete);
+router.patch("/:code", promotionDetailController.delete);
 
 module.exports = router;
