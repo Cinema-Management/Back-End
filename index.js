@@ -28,6 +28,8 @@ const salesInvoiceRoute = require("./routes/salesInvoiceRoute");
 const salesInvoiceDetailRoute = require("./routes/salesInvoiceDetailRoute");
 const seatStatusInScheduleRoute = require("./routes/seatStatusInScheduleRoute");
 const promotionDetailRoute = require("./routes/promotionDetailRoute");
+const returnInvoiceRoute = require("./routes/returnInvoiceRoute");
+const returnInvoiceDetailRoute = require("./routes/returnInvoiceDetailRoute");
 const cookieParser = require("cookie-parser");
 
 mongoose
@@ -71,7 +73,8 @@ app.use("/api/sales-invoices", salesInvoiceRoute);
 app.use("/api/sales-invoices-details", salesInvoiceDetailRoute);
 app.use("/api/seat-status-in-schedules", seatStatusInScheduleRoute);
 app.use("/api/promotion-details", promotionDetailRoute);
-
+app.use("/api/return-invoices", returnInvoiceRoute);
+app.use("/api/return-invoices-details", returnInvoiceDetailRoute);
 app.get("/", (req, res) => {
   return res.send("Hello World");
 });
