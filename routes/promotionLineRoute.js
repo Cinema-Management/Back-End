@@ -4,6 +4,6 @@ const router = require("express").Router();
 router.get("/", promotionLineController.getAll);
 
 router.post("/", promotionLineController.add);
-router.delete("/:code", promotionLineController.delete);
-router.put("/updateStatus", promotionLineController.updateStatus);
+router.patch("/:code", promotionLineController.delete);
+router.put("/:code", promotionLineController.update);
 module.exports = router;

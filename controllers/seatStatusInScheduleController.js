@@ -87,7 +87,10 @@ const seatStatusInScheduleController = {
 
       const dayOfWeek = schedule.date.getDay(); // Lấy ngày trong tuần từ date (0-6)
 
+      console.log("dayOfWeek:", dayOfWeek); // Log lại timeSlot để kiểm tra
+
       const timeSlot = determineTimeSlot(schedule.startTime, dayOfWeek); // Hàm xác định khung giờ
+      console.log("timeSlot:", timeSlot); // Log lại timeSlot để kiểm tra
 
       // Tìm các sản phẩm (ghế) với roomCode, type=0 (ghế)
       const seats = await Product.find({
@@ -101,7 +104,7 @@ const seatStatusInScheduleController = {
       }
 
       // Tìm bảng giá chi tiết cho ghế
-      const prices = await Price.find({
+      const prices = await Price.findOne({
         type: "0", // So sánh với type
         status: 1, // So sánh với status
         dayOfWeek: { $in: [dayOfWeek] }, // So sánh với dayOfWeek
@@ -109,9 +112,10 @@ const seatStatusInScheduleController = {
         startDate: { $lte: schedule.date }, // startDate <= schedule.date
         endDate: { $gte: schedule.date }, // endDate >= schedule.date
       });
+      console.log("prices:", prices.code); // Log lại prices để kiểm tra
 
       const priceDetails = await PriceDetail.find({
-        priceCode: { $in: prices.map((price) => price.code) }, // So sánh với mã giá
+        priceCode: prices?.code, // So sánh với mã giá
         roomTypeCode: schedule.screeningFormatCode, // So sánh với mã loại phòng
       });
 

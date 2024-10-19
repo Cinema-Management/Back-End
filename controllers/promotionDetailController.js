@@ -91,8 +91,16 @@ const promotionDetailController = {
       });
 
       // Lấy ngày hiện tại theo định dạng YYYY-MM-DD
-      const today = new Date(promotionLine.startDate);
-      const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
+
+      let targetDate = new Date(promotionLine.startDate);
+
+      const vietnamTimezoneOffset = 7 * 60; // Phút (-7 giờ)
+      targetDate = new Date(
+        targetDate.getTime() + vietnamTimezoneOffset * 60 * 1000
+      ); // Lùi 7 giờ về UTC
+
+      const formattedDate = targetDate.toISOString().split("T")[0]; // YYYY-MM-DD
+      console.log(formattedDate);
 
       // Lấy tất cả tài liệu bao gồm cả đã xóa
       const allPromotionDetails = await PromotionDetail.findWithDeleted();
