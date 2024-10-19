@@ -6,18 +6,16 @@ const promotionCOntroller = {
       const { description, startDate, endDate } = req.body;
 
       const currentDate = new Date();
-      const startDateNew = new Date(startDate);
-      const endDateNew = new Date(endDate);
 
       // Kiểm tra ngày bắt đầu có lớn hơn ngày hiện tại hay không
-      if (startDateNew <= currentDate) {
+      if (startDate < currentDate) {
         return res.status(400).send({
           message: "Start date must be greater than the current date",
         });
       }
 
       // Kiểm tra ngày kết thúc có lớn hơn hoặc bằng ngày bắt đầu không
-      if (endDateNew < startDateNew) {
+      if (endDate < startDate) {
         return res.status(400).send({
           message:
             "The end date must be greater than or equal to the start date",
@@ -29,8 +27,8 @@ const promotionCOntroller = {
         $or: [
           {
             // Điều kiện 1: Khuyến mãi mới bắt đầu trước khi một khuyến mãi đã tồn tại kết thúc và kết thúc sau khi khuyến mãi đã tồn tại bắt đầu
-            startDate: { $lte: endDateNew },
-            endDate: { $gte: startDateNew },
+            startDate: { $lte: endDate },
+            endDate: { $gte: startDate },
           },
         ],
       });
@@ -117,50 +115,14 @@ const promotionCOntroller = {
         });
       }
 
-      const currentDate = new Date();
-      const startDateNew = new Date(startDate);
-      const endDateNew = new Date(endDate);
-
       // Kiểm tra ngày bắt đầu có lớn hơn ngày hiện tại hay không
-      if (startDateNew <= currentDate) {
-        return res.status(400).send({
-          message: "Start date must be greater than the current date",
-        });
-      }
 
       // Kiểm tra ngày kết thúc có lớn hơn hoặc bằng ngày bắt đầu không
-      if (endDateNew < startDateNew) {
-        return res.status(400).send({
-          message:
-            "The end date must be greater than or equal to the start date",
-        });
-      }
-
-      // Kiểm tra chồng chéo ngày với các chương trình khuyến mãi khác
-      const overlappingPromotion = await Promotion.findOne({
-        $or: [
-          {
-            _id: { $ne: promotion._id }, // Loại trừ chương trình hiện tại
-            startDate: { $lt: endDateNew },
-            endDate: { $gt: startDateNew },
-          },
-        ],
-      });
-
-      if (overlappingPromotion) {
-        return res.status(400).send({
-          message: `There is already a promotion in the same date range from ${overlappingPromotion.startDate
-            .toISOString()
-            .substring(0, 10)} to ${overlappingPromotion.endDate
-            .toISOString()
-            .substring(0, 10)}`,
-        });
-      }
 
       // Cập nhật thông tin khuyến mãi
       promotion.description = description;
-      promotion.startDate = startDateNew;
-      promotion.endDate = endDateNew;
+      promotion.startDate = startDate;
+      promotion.endDate = endDate;
 
       await promotion.save(); // Lưu khuyến mãi đã cập nhật
 

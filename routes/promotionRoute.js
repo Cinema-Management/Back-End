@@ -10,7 +10,6 @@ router.get(
 router.post("/", promotionController.add);
 
 router.put("/:code", promotionController.update);
-router.delete("/:code", promotionController.delete);
-
+router.patch("/:code", promotionController.delete);
 
 module.exports = router;
