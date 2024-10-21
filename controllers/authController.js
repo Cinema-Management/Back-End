@@ -67,6 +67,7 @@ const authController = {
         email: email,
         isAdmin: null,
         status: 1,
+        points: type === 0 ? 0 : null, // Gán giá trị points dựa trên type
         type: type,
       });
 

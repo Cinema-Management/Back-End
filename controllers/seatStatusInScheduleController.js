@@ -112,7 +112,9 @@ const seatStatusInScheduleController = {
         startDate: { $lte: schedule.date }, // startDate <= schedule.date
         endDate: { $gte: schedule.date }, // endDate >= schedule.date
       });
-      console.log("prices:", prices.code); // Log lại prices để kiểm tra
+      if (!prices) {
+        return res.status(200).json([]);
+      }
 
       const priceDetails = await PriceDetail.find({
         priceCode: prices?.code, // So sánh với mã giá

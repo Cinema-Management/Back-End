@@ -598,7 +598,25 @@ const priceController = {
   getAllPriceFood: async (req, res) => {
     try {
       const { date } = req.query;
-      const currentDate = new Date(date);
+
+      // Tạo startOfDay và endOfDay dựa trên giờ UTC (đã lùi 7 giờ từ giờ Việt Nam)
+      // const startOfDay = new Date(
+      //   targetDate.getFullYear(),
+      //   targetDate.getMonth(),
+      //   targetDate.getDate(),
+      //   0,
+      //   0,
+      //   0
+      // ); // 00:00:00 giờ UTC
+
+      // const endOfDay = new Date(
+      //   targetDate.getFullYear(),
+      //   targetDate.getMonth(),
+      //   targetDate.getDate(),
+      //   0,
+      //   0,
+      //   0
+      // ); // 23:59:59 giờ UTC
       // Bước 1: Tìm các sản phẩm không phải ghế
       const products = await Product.find({ type: { $ne: 0 }, status: 1 });
 
@@ -608,9 +626,11 @@ const priceController = {
       const prices = await Price.find({
         type: "1",
         status: 1,
-        startDate: { $lte: currentDate }, // Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày hiện tại
-        endDate: { $gte: currentDate }, // Ngày kết thúc phải lớn hơn hoặc bằng ngày hiện tại
+        startDate: { $lte: date }, // Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày hiện tại
+        endDate: { $gte: date }, // Ngày kết thúc phải lớn hơn hoặc bằng ngày hiện tại
       });
+
+      console.log(prices);
 
       // Bước 4: Lấy mã giá
       const priceCodes = prices.map((price) => price.code);
