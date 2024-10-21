@@ -100,7 +100,6 @@ const promotionDetailController = {
       ); // Lùi 7 giờ về UTC
 
       const formattedDate = targetDate.toISOString().split("T")[0]; // YYYY-MM-DD
-      console.log(formattedDate);
 
       // Lấy tất cả tài liệu bao gồm cả đã xóa
       const allPromotionDetails = await PromotionDetail.findWithDeleted();

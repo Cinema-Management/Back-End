@@ -165,8 +165,6 @@ const movieController = {
         movieGenreCode = [];
       }
 
-      console.log(req.body);
-
       if (movieGenreCode) {
         const existingGenres = await MovieGenre.find({
           code: { $in: movieGenreCode },
