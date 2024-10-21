@@ -139,7 +139,6 @@ const scheduleController = {
         startTime: start,
         endTime: end,
       });
-      console.log("tt", newSchedule.date);
 
       await newSchedule.save();
 

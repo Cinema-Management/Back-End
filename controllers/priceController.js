@@ -221,7 +221,6 @@ const priceController = {
       }
 
       await price.save();
-      console.log(price);
       return res.status(200).send(price);
     } catch (error) {
       res.status(500).send({ message: error.message });
@@ -324,7 +323,6 @@ const priceController = {
         });
       }
 
-      console.log(priceCode);
       if (price.status === 1) {
         return res.status(400).send({
           message: "Price is active, cannot be deleted",
@@ -351,7 +349,6 @@ const priceController = {
         foreignField: "code",
       });
 
-      console.log(priceDetail);
       if (!priceDetail) {
         return res.status(404).send({
           message: "Price detail not found",
@@ -563,7 +560,6 @@ const priceController = {
 
   getPriceDetailsFood: async (req, res) => {
     const { productCode } = req.query;
-    console.log(productCode);
     try {
       const priceDetails = await PriceDetail.find({
         productCode: productCode,
@@ -576,8 +572,6 @@ const priceController = {
         select: "code name status startDate endDate type",
         foreignField: "code",
       });
-
-      console.log("Price Details:", priceDetails);
 
       if (
         !priceDetails ||
@@ -629,8 +623,6 @@ const priceController = {
         startDate: { $lte: date }, // Ngày bắt đầu phải nhỏ hơn hoặc bằng ngày hiện tại
         endDate: { $gte: date }, // Ngày kết thúc phải lớn hơn hoặc bằng ngày hiện tại
       });
-
-      console.log(prices);
 
       // Bước 4: Lấy mã giá
       const priceCodes = prices.map((price) => price.code);
