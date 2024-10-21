@@ -11,6 +11,7 @@ const UserSchema = new Schema(
     name: {
       type: String,
       required: true,
+      trim: true,
     },
     birthDate: {
       type: Date,
@@ -19,23 +20,28 @@ const UserSchema = new Schema(
     gender: {
       type: String,
       required: false,
+      trim: true,
     },
     address: {
       type: String,
       ref: "HierarchyValue",
       required: false,
+      trim: true,
     },
     avatar: {
       type: String,
       required: false,
+      trim: true,
     },
     phone: {
       type: String,
       required: true,
+      trim: true,
     },
     email: {
       type: String,
       required: true,
+      trim: true,
     },
     password: {
       type: String,
@@ -43,12 +49,13 @@ const UserSchema = new Schema(
     },
     points: {
       type: Number,
-      default: 0, // Mặc định là 0 điểm
+      default: null, // Mặc định là 0 điểm
     },
     customerType: {
       type: String,
       ref: "HierarchyValue",
       required: false,
+      trim: true,
     },
     type: {
       // 0: user, 1: staff
@@ -58,6 +65,13 @@ const UserSchema = new Schema(
     isAdmin: {
       type: Boolean,
       default: false,
+    },
+    cinemaCode: {
+      type: String,
+      ref: "Cinema",
+      trim: true,
+
+      default: null,
     },
     status: {
       // 0: inactive, 1: active
