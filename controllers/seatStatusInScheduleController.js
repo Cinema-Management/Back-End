@@ -79,18 +79,14 @@ const seatStatusInScheduleController = {
     try {
       const { scheduleCode } = req.query;
 
-      // Lấy thông tin lịch chiếu
       const schedule = await Schedule.findOne({ code: scheduleCode });
       if (!schedule) {
         return res.status(404).json({ message: "Schedule not found." });
       }
 
-      const dayOfWeek = schedule.date.getDay(); // Lấy ngày trong tuần từ date (0-6)
+      const dayOfWeek = schedule.date.getDay();
 
-      console.log("dayOfWeek:", dayOfWeek); // Log lại timeSlot để kiểm tra
-
-      const timeSlot = determineTimeSlot(schedule.startTime, dayOfWeek); // Hàm xác định khung giờ
-      console.log("timeSlot:", timeSlot); // Log lại timeSlot để kiểm tra
+      const timeSlot = determineTimeSlot(schedule.startTime, dayOfWeek);
 
       // Tìm các sản phẩm (ghế) với roomCode, type=0 (ghế)
       const seats = await Product.find({
@@ -153,11 +149,8 @@ const seatStatusInScheduleController = {
 
   updateStatusSeat: async (req, res) => {
     try {
-      const { scheduleCode, arrayCode, status } = req.body; // Lấy mảng code và status từ body request
-      console.log("arrayCode:", arrayCode); // Log lại arrayCode để kiểm tra
-      console.log("status:", status); // Log lại status để kiểm tra
+      const { scheduleCode, arrayCode, status } = req.body;
 
-      // Tìm các trạng thái ghế theo productCode trong danh sách và scheduleCode
       const seatStatuses = await SeatStatusInSchedule.find({
         productCode: { $in: arrayCode },
         scheduleCode: scheduleCode,
