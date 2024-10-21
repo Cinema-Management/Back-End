@@ -53,7 +53,6 @@ const returnInvoiceController = {
       });
 
       await returnInvoice.save();
-      console.log("returnInvoice successfully added");
       return res.status(201).send(returnInvoice);
     } catch (error) {
       return res.status(400).send(error);
@@ -178,7 +177,6 @@ const returnInvoiceController = {
         returnReason,
       } = req.body;
 
-      console.log("body", req.body);
       const salesInvoice = await SalesInvoice.findOne({
         code: salesInvoiceCode,
         status: 1,

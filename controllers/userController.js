@@ -332,7 +332,6 @@ const userController = {
         status,
         type,
       } = req.body;
-      console.log("req.body", req.body);
 
       // Tìm nhân viên theo mã code
       const existingUser = await User.findOne({ code: code, type: type });
