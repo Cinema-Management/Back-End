@@ -119,6 +119,14 @@ const scheduleController = {
           nextCodeNumber < 10 ? `SC0${nextCodeNumber}` : `SC${nextCodeNumber}`;
       }
 
+      let targetDate = new Date(date);
+
+      // Lùi 7 giờ để chuyển từ giờ Việt Nam về UTC (tránh dùng Date.UTC vì dữ liệu đã lưu dưới dạng UTC)
+      const vietnamTimezoneOffset = -7 * 60; // Phút (-7 giờ)
+      targetDate = new Date(
+        targetDate.getTime() + vietnamTimezoneOffset * 60 * 1000
+      );
+
       // Tạo mới lịch chiếu
       const newSchedule = new Schedule({
         code: newCode,
@@ -127,10 +135,11 @@ const scheduleController = {
         screeningFormatCode,
         subtitleCode,
         audioCode,
-        date,
+        date: targetDate,
         startTime: start,
         endTime: end,
       });
+      console.log("tt", newSchedule.date);
 
       await newSchedule.save();
 
@@ -169,6 +178,15 @@ const scheduleController = {
     try {
       const { cinemaCode } = req.params;
       const { date } = req.query;
+
+      let targetDate = new Date(date);
+
+      // Lùi 7 giờ để chuyển từ giờ Việt Nam về UTC (tránh dùng Date.UTC vì dữ liệu đã lưu dưới dạng UTC)
+      const vietnamTimezoneOffset = -7 * 60; // Phút (-7 giờ)
+      targetDate = new Date(
+        targetDate.getTime() + vietnamTimezoneOffset * 60 * 1000
+      );
+
       const rooms = await Room.find({ cinemaCode })
         .populate({
           path: "roomTypeCode", // Trường chứa mã loại phòng
@@ -198,7 +216,7 @@ const scheduleController = {
         rooms.map(async (room) => {
           const schedules = await Schedule.find({
             roomCode: room.code,
-            date: date,
+            date: targetDate,
           })
             .populate({
               path: "movieCode",
@@ -418,7 +436,7 @@ const scheduleController = {
       // Tìm lịch chiếu cho phòng theo mã và ngày hiện tại
       const schedules = await Schedule.find({
         roomCode: roomCode,
-        date: currentDate,
+        date: { $gte: currentDate }, // So sánh với ngày hiện tại
       });
 
       // Nếu không có lịch chiếu, trả về phản hồi không có lịch chiếu
