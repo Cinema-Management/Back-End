@@ -44,7 +44,6 @@ const salesInvoiceController = {
       });
 
       await salesInvoice.save();
-      console.log("salesInvoice successfully added");
       return res.status(201).send(salesInvoice);
     } catch (error) {
       return res.status(400).send(error);
