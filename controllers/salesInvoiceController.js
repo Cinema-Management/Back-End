@@ -69,7 +69,7 @@ const salesInvoiceController = {
             },
             {
               path: "movieCode",
-              select: "name",
+              select: "name ageRestriction",
               foreignField: "code",
             },
             {

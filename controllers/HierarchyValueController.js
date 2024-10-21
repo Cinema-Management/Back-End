@@ -114,7 +114,15 @@ const hierarchyValueController = {
     try {
       const { code } = req.params;
       const cinema = await Cinema.findOne({ code: code });
-      const hierarchyValueCode = cinema.hierarchyValueCode;
+      let hierarchyValueCode;
+      if (cinema) {
+        hierarchyValueCode = cinema.hierarchyValueCode;
+      } else {
+        hierarchyValueCode = code;
+      }
+      if (!hierarchyValueCode || code === null) {
+        return res.status(200).json();
+      }
 
       // Hàm đệ quy lấy địa chỉ đầy đủ từ phân cấp
       const buildFullAddress = async (currentCode, addressParts = []) => {

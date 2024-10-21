@@ -9,6 +9,7 @@ const Cinema = require("../models/Cinema");
 const SalesInvoice = require("../models/SalesInvoice");
 const SalesInvoiceDetail = require("../models/SalesInvoiceDetail");
 const { get } = require("mongoose");
+const PromotionResult = require("../models/PromotionResult");
 
 const returnInvoiceController = {
   add: async (req, res) => {
@@ -233,6 +234,13 @@ const returnInvoiceController = {
           };
         })
       );
+      const promotionResult = await PromotionResult.findOne({
+        salesInvoiceCode: salesInvoiceCode,
+      });
+      if (promotionResult) {
+        promotionResult.status = 0;
+        await promotionResult.save();
+      }
 
       await ReturnInvoiceDetail.insertMany(returnDetails);
       salesInvoice.status = 0;

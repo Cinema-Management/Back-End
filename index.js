@@ -30,6 +30,8 @@ const seatStatusInScheduleRoute = require("./routes/seatStatusInScheduleRoute");
 const promotionDetailRoute = require("./routes/promotionDetailRoute");
 const returnInvoiceRoute = require("./routes/returnInvoiceRoute");
 const returnInvoiceDetailRoute = require("./routes/returnInvoiceDetailRoute");
+const promotionResultRoute = require("./routes/promotionResultRoute");
+const locationRoute = require("./routes/locationRoute");
 const cookieParser = require("cookie-parser");
 
 mongoose
@@ -75,6 +77,8 @@ app.use("/api/seat-status-in-schedules", seatStatusInScheduleRoute);
 app.use("/api/promotion-details", promotionDetailRoute);
 app.use("/api/return-invoices", returnInvoiceRoute);
 app.use("/api/return-invoices-details", returnInvoiceDetailRoute);
+app.use("/api/promotion-results", promotionResultRoute);
+app.use("/api/locations", locationRoute);
 app.get("/", (req, res) => {
   return res.send("Hello World");
 });
