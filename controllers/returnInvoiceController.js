@@ -109,9 +109,17 @@ const returnInvoiceController = {
             foreignField: "code",
           });
 
+          const promotionResults = await PromotionResult.findOne({
+            salesInvoiceCode: invoice.salesInvoiceCode,
+          });
+          const discountAmount = promotionResults
+            ? promotionResults.discountAmount
+            : 0;
+
           return {
             ...invoice.toObject(),
             details,
+            discountAmount: discountAmount,
           };
         })
       );
@@ -162,6 +170,28 @@ const returnInvoiceController = {
       return res.status(200).json(responseObject);
     } catch (error) {
       return res.status(500).json({ message: error.message });
+    }
+  },
+
+  getBySalesInvoiceCode: async (req, res) => {
+    try {
+      const { salesInvoiceCode } = req.params;
+      const promotionResults = await PromotionResult.findOne({
+        salesInvoiceCode: salesInvoiceCode,
+      });
+      if (!promotionResults) {
+        return res.status(200).send("");
+      }
+      const promotionPop = await promotionResults.populate({
+        path: "freeProductCode",
+        model: "Product",
+        select: "name description",
+        foreignField: "code",
+      });
+
+      res.status(200).send(promotionPop);
+    } catch (error) {
+      res.status(400).send(error);
     }
   },
 

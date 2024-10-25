@@ -49,7 +49,7 @@ const UserSchema = new Schema(
     },
     points: {
       type: Number,
-      default: null, // Mặc định là 0 điểm
+      default: 0, // Mặc định là 0 điểm
     },
     customerType: {
       type: String,
@@ -78,6 +78,16 @@ const UserSchema = new Schema(
       type: Number,
       default: 1,
     },
+    permissionRequest: {
+      status: {
+        type: Number,
+        default: 0,
+      },
+      date: {
+        type: Date,
+        default: null,
+      },
+    },
   },
   { timestamps: true }
 );
@@ -87,9 +97,28 @@ UserSchema.pre("save", function (next) {
     this.points = undefined; // Không lưu điểm
     this.customerType = undefined; // Không lưu loại khách hàng
   }
+
+  if (this.type === 0) {
+    this.cinemaCode = undefined; // Không lưu điểm
+    this.isAdmin = undefined;
+    this.permissionRequest = undefined;
+  }
   next();
 });
+UserSchema.methods.toJSON = function () {
+  const obj = this.toObject();
 
+  if (obj.type === 0) {
+    delete obj.cinemaCode;
+    delete obj.isAdmin;
+    delete obj.permissionRequest;
+  } else if (obj.type === 1) {
+    delete obj.customerType;
+    delete obj.points;
+  }
+
+  return obj;
+};
 //add plugins
 UserSchema.plugin(AutoIncrement, { inc_field: "userId" });
 UserSchema.plugin(mongooseDelete, {

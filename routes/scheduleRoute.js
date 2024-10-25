@@ -12,6 +12,15 @@ router.get(
   "/checkRoomHasSchedules/:roomCode",
   scheduleController.checkRoomHasSchedules
 );
+router.get(
+  "/getAllMovieWithSchedules",
+  scheduleController.getAllMovieWithSchedules
+);
+
+router.get(
+  "/getSchedulesByDateAndMovie",
+  scheduleController.getSchedulesByDateAndMovie
+);
 
 router.post("/", scheduleController.add);
 router.put("/status/:code", scheduleController.updateStatus);
