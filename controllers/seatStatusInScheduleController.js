@@ -78,6 +78,7 @@ const seatStatusInScheduleController = {
   getAllSeatsStatusInScheduleCode: async (req, res) => {
     try {
       const { scheduleCode } = req.query;
+      
 
       const schedule = await Schedule.findOne({ code: scheduleCode });
       if (!schedule) {

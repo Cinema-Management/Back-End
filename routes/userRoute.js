@@ -11,8 +11,17 @@ router.post("/checkUserStatusByPhone", userController.checkUserStatusByPhone);
 
 router.get("/", userController.getAllUser);
 router.get("/staff", userController.getAllStaff);
+router.get(
+  "/getAllStaffPermissionRequest",
+  userController.getAllStaffPermissionRequest
+);
 
 router.put("/:code", userController.update);
+router.put(
+  "/updatePermissionRequest/:code",
+  userController.updatePermissionRequest
+);
+
 router.patch("/:code", userController.delete);
 
 module.exports = router;

@@ -6,8 +6,16 @@ let refreshTokens = [];
 const authController = {
   register: async (req, res) => {
     try {
-      const { name, birthDate, gender, phone, email, password, type } =
-        req.body;
+      const {
+        name,
+        birthDate,
+        gender,
+        phone,
+        email,
+        password,
+        cinemaCode,
+        type,
+      } = req.body;
 
       const salt = bcrypt.genSaltSync(10);
       const hashPassword = bcrypt.hashSync(password, salt);
@@ -68,6 +76,7 @@ const authController = {
         isAdmin: null,
         status: 1,
         points: type === 0 ? 0 : null, // Gán giá trị points dựa trên type
+        cinemaCode: cinemaCode,
         type: type,
       });
 
