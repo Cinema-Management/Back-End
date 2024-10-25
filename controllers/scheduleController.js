@@ -6,6 +6,7 @@ const Audio = require("../models/Audio");
 const Product = require("../models/Product");
 const RoomType = require("../models/RoomType");
 const SeatStatusInSchedule = require("../models/SeatStatusInSchedule");
+const Cinema = require("../models/Cinema");
 
 const scheduleController = {
   add: async (req, res) => {
@@ -480,5 +481,268 @@ const scheduleController = {
       res.status(500).json({ message: error.message });
     }
   },
+
+  getAllMovieWithSchedules: async (req, res) => {
+    try {
+      const {  status } = req.query;
+      
+  
+            // Tìm tất cả các lịch chiếu từ ngày hiện tại trở đi
+        
+      let targetDate = new Date().setHours(0, 0, 0, 0);
+      
+      //type = 1 lấy phim chưa có lịch chiếu và sắp chiếu
+
+      if (status === ('3'|| 3)) {
+
+        const schedules = await Schedule.find({
+          date: { $gte: targetDate },
+          status: { $ne: 0 }, // Status khác 0
+        })
+        .populate({
+          path: "movieCode",
+          model: "Movie",
+          foreignField: "code",
+          populate: {
+            path: "movieGenreCode",
+            model: "MovieGenre",
+            select: "code name -_id",
+            foreignField: "code",
+          },
+        });
+    
+        if (schedules.length === 0) {
+          return res.status(200).json([]);
+        }
+    
+        // Nhóm các lịch chiếu theo phim
+        const moviesMap = {};
+    
+        schedules.forEach((schedule) => {
+          const movie = schedule.movieCode;
+          if (!moviesMap[movie.code]) {
+            // Nếu phim chưa tồn tại trong danh sách, thêm vào
+            moviesMap[movie.code] = {
+              code: movie.code,
+              name: movie.name,
+              image: movie.image,
+              duration: movie.duration,
+              ageRestriction: movie.ageRestriction,
+              description: movie.description, // Thêm mô tả
+              trailer: movie.trailer, // Thêm trailer
+              director: movie.director, // Thêm đạo diễn
+              cast: movie.cast, // Thêm dàn diễn viên
+              country: movie.country, // Thêm quốc gia
+              startDate: movie.startDate, // Thêm ngày bắt đầu
+              endDate: movie.endDate, // Thêm ngày kết thúc
+              genres: movie.movieGenreCode.map((genre) => genre.name).join(", "), // Thêm thể loại
+            };
+          }
+        });
+        // Lấy danh sách các mã phim từ lịch chiếu
+        const scheduledMovieCodes = Object.keys(moviesMap);
+  
+        // Tìm tất cả các phim không có lịch chiếu
+        const movies = await Movie.find({
+          status: 1, 
+          startDate: { $gt: targetDate },
+          code: { $nin: scheduledMovieCodes } // Bỏ qua các phim đã có lịch chiếu
+        }).populate({
+          path: "movieGenreCode",
+          model: "MovieGenre",
+          select: "code name -_id",
+          foreignField: "code",
+        });
+        const movieFull = movies.map(movie => ({
+          code: movie.code,
+          name: movie.name,
+          image: movie.image,
+          duration: movie.duration,
+          ageRestriction: movie.ageRestriction,
+          description: movie.description,
+          trailer: movie.trailer,
+          director: movie.director,
+          cast: movie.cast,
+          country: movie.country,
+          startDate: movie.startDate,
+          endDate: movie.endDate,
+          genres: movie.movieGenreCode.map(genre => genre.name).join(", "), // Thêm thể loại
+        }));
+        
+        return res.status(200).json(movieFull);
+      }
+      else{
+
+      // Tìm tất cả các lịch chiếu từ ngày hiện tại trở đi  status = 1 là sắp chiếu, 2 là suất chiếu sớm hơn ngày phát hành
+
+        const schedules = await Schedule.find({ 
+          date: { $gte: targetDate },
+          status: status 
+        })
+        .populate({
+          path: "movieCode",
+          model: "Movie",
+          foreignField: "code",
+          populate: {
+            path: "movieGenreCode",
+            model: "MovieGenre",
+            select: "code name -_id",
+            foreignField: "code",
+          },
+        });
+    
+        if (schedules.length === 0) {
+          return res.status(200).json([]);
+        }
+    
+        // Nhóm các lịch chiếu theo phim
+        const moviesMap = {};
+    
+        schedules.forEach((schedule) => {
+          const movie = schedule.movieCode;
+          if (!moviesMap[movie.code]) {
+            // Nếu phim chưa tồn tại trong danh sách, thêm vào
+            moviesMap[movie.code] = {
+              code: movie.code,
+              name: movie.name,
+              image: movie.image,
+              duration: movie.duration,
+              ageRestriction: movie.ageRestriction,
+              description: movie.description, // Thêm mô tả
+              trailer: movie.trailer, // Thêm trailer
+              director: movie.director, // Thêm đạo diễn
+              cast: movie.cast, // Thêm dàn diễn viên
+              country: movie.country, // Thêm quốc gia
+              startDate: movie.startDate, // Thêm ngày bắt đầu
+              endDate: movie.endDate, // Thêm ngày kết thúc
+              genres: movie.movieGenreCode.map((genre) => genre.name).join(", "), // Thêm thể loại
+            };
+          }
+        });
+  
+        // Chuyển từ object sang mảng
+        const movies = Object.values(moviesMap);
+    
+        return res.status(200).json(movies);
+
+      }
+
+    } catch (error) {
+      console.error("Error getting movies with schedules:", error);
+      return res.status(500).json({ message: "Internal server error", error });
+    }
+  },
+
+  getSchedulesByDateAndMovie: async (req, res) => {
+    try {
+      const { movieCode, date } = req.query; // Lấy movieCode từ query
+  
+      console.log(new Date());
+  
+      // Lấy tất cả các lịch chiếu theo ngày và movieCode
+      const schedules = await Schedule.find({
+        date: date, // Tìm lịch chiếu theo ngày đã cho
+        movieCode: movieCode,
+        startTime: { $gt: new Date() }, 
+        status: { $ne: 0 }, // Status khác 0
+      })
+        .populate({
+          path: "roomCode", // Giả sử bạn đã thiết lập populate đúng
+          select: "name cinemaCode", // Chọn các trường cần thiết
+          model: "Room",
+          foreignField: "code",
+          populate: {
+            path: "cinemaCode", // Populate thông tin rạp từ room
+            select: "name", // Chọn trường name từ Cinema
+            model: "Cinema",
+            foreignField: "code",
+          },
+        })
+        .populate({
+          path: "screeningFormatCode", // Giả sử bạn đã thiết lập populate đúng
+          select: "name", // Chọn trường name từ RoomType
+          model: "RoomType",
+          foreignField: "code",
+        })
+        .populate({
+          path: "subtitleCode", // Populate thông tin phụ đề
+          select: "name", // Chọn trường name từ Subtitle
+          model: "Subtitle",
+          foreignField: "code",
+        })
+        .populate({
+          path: "audioCode", // Populate thông tin âm thanh
+          select: "name", // Chọn trường name từ Audio
+          model: "Audio",
+          foreignField: "code",
+        });
+  
+      if (schedules.length === 0) {
+        return res.status(200).json([]); // Nếu không có lịch chiếu
+      }
+  
+      // Nhóm lịch chiếu theo ngày và rạp, kết hợp screeningFormatCode, subtitleCode và audioCode
+      const groupedSchedules = schedules.reduce((acc, schedule) => {
+        const scheduleDate = schedule.date;
+        const room = schedule.roomCode; // Lấy thông tin phòng từ populate
+        const cinema = room.cinemaCode; // Lấy thông tin rạp từ room
+  
+        // Kiểm tra xem ngày đã tồn tại trong acc chưa
+        if (!acc[scheduleDate]) {
+          acc[scheduleDate] = {
+            date: scheduleDate,
+            cinemas: {}, // Khởi tạo một đối tượng rỗng cho các rạp
+          };
+        }
+  
+        // Kiểm tra xem rạp đã tồn tại trong cinemas chưa
+        if (!acc[scheduleDate].cinemas[cinema.code]) {
+          acc[scheduleDate].cinemas[cinema.code] = {
+            name: cinema.name, // Tên rạp
+            screeningFormats: {}, // Khởi tạo một đối tượng rỗng cho các định dạng suất chiếu
+          };
+        }
+  
+        // Tạo một key duy nhất cho sự kết hợp của screeningFormatCode, subtitleCode và audioCode
+        const formatKey = `${schedule.screeningFormatCode.code}_${schedule.subtitleCode ? schedule.subtitleCode.code : 'none'}_${schedule.audioCode ? schedule.audioCode.code : 'none'}`;
+  
+        // Kiểm tra xem định dạng suất chiếu đã tồn tại chưa
+        if (!acc[scheduleDate].cinemas[cinema.code].screeningFormats[formatKey]) {
+          acc[scheduleDate].cinemas[cinema.code].screeningFormats[formatKey] = {
+            name: schedule.screeningFormatCode.name, // Lấy tên định dạng suất chiếu
+            code: schedule.screeningFormatCode.code, // Mã định dạng suất chiếu
+            subtitle: schedule.subtitleCode ? schedule.subtitleCode.name : null, // Lấy tên phụ đề nếu có
+            audio: schedule.audioCode ? schedule.audioCode.name : null, // Lấy tên âm thanh nếu có
+            showtimes: [], // Khởi tạo một mảng rỗng cho các giờ chiếu
+          };
+        }
+  
+        // Thêm giờ chiếu vào danh sách showtimes cho định dạng suất chiếu
+        acc[scheduleDate].cinemas[cinema.code].screeningFormats[formatKey].showtimes.push({
+          startTime: schedule.startTime,
+          endTime: schedule.endTime,
+        });
+  
+        return acc;
+      }, {});
+  
+      // Chuyển đổi object thành array
+      const result = Object.values(groupedSchedules).map(schedule => ({
+        date: schedule.date,
+        cinemas: Object.values(schedule.cinemas).map(cinema => ({
+          name: cinema.name,
+          screeningFormats: Object.values(cinema.screeningFormats),
+        })),
+      }));
+  
+      return res.status(200).json(result);
+    } catch (error) {
+      console.error("Error getting schedules:", error);
+      return res.status(500).json({ message: "Internal server error", error });
+    }
+  },
+  
+  
+
 };
 module.exports = scheduleController;

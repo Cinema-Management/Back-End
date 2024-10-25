@@ -7,6 +7,7 @@ const Movie = require("../models/Movie");
 const User = require("../models/User");
 const Cinema = require("../models/Cinema");
 const { get } = require("mongoose");
+const PromotionResult = require("../models/PromotionResult");
 
 const salesInvoiceController = {
   add: async (req, res) => {
@@ -98,10 +99,16 @@ const salesInvoiceController = {
             select: "name seatNumber type description",
             foreignField: "code",
           });
-
+          const promotionResults = await PromotionResult.findOne({
+            salesInvoiceCode: invoice.code,
+          });
+          const discountAmount = promotionResults
+            ? promotionResults.discountAmount
+            : 0;
           return {
             ...invoice.toObject(),
             details,
+            discountAmount: discountAmount,
           };
         })
       );

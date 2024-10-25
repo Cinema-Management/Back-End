@@ -34,6 +34,9 @@ const promotionResultRoute = require("./routes/promotionResultRoute");
 const locationRoute = require("./routes/locationRoute");
 const cookieParser = require("cookie-parser");
 
+const IP = process.env.IP;
+const http = require("http");
+const server = http.createServer(app);
 mongoose
   .connect(dbURI)
   .then(() => {
@@ -86,6 +89,9 @@ app.get("/", (req, res) => {
 app.use(function (req, res) {
   res.status(404).send("Not found");
 });
-const listener = app.listen(PORT, () => {
-  console.log(`Server is running on port ${listener.address().port}`);
+
+server.listen(PORT, IP, () => {
+  console.log("Server is running on IP: " + IP);
+  console.log("Server is running on PORT: " + PORT);
+  console.log("Server is running on DB: " + mongodb);
 });

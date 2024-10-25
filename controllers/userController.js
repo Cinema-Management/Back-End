@@ -330,6 +330,7 @@ const userController = {
         address,
         cinemaCode,
         status,
+        isAdmin,
         type,
       } = req.body;
 
@@ -363,6 +364,11 @@ const userController = {
       if (cinemaCode && cinemaCode !== existingUser.cinemaCode) {
         existingUser.cinemaCode = cinemaCode;
       }
+
+      if (isAdmin !== undefined && isAdmin !== existingUser.isAdmin) {
+        existingUser.isAdmin = isAdmin; // Cập nhật với giá trị mới
+      }
+
       if (status !== undefined && status !== existingUser.status) {
         existingUser.status = status;
       }
@@ -407,6 +413,87 @@ const userController = {
       });
     } catch (error) {
       return res.status(500).json({ message: "Error deleting User", error });
+    }
+  },
+  updatePermissionRequest: async (req, res) => {
+    try {
+      const { code } = req.params; // Lấy mã người dùng từ params
+      const { status } = req.body; // Lấy status từ body
+
+      // Kiểm tra xem status có hợp lệ hay không
+      if (typeof status !== "number") {
+        return res.status(400).json({ error: "Status must be a number." });
+      }
+
+      // Tìm người dùng theo mã
+      const existingUser = await User.findOne({ code: code });
+
+      // Kiểm tra nếu người dùng không tồn tại
+      if (!existingUser) {
+        return res.status(404).json({ error: "User not found." });
+      }
+
+      if (!existingUser) {
+        return res.status(404).json({ error: "User not found." });
+      }
+
+      // Kiểm tra xem permissionRequest đã tồn tại hay chưa
+      if (!existingUser.permissionRequest) {
+        // Nếu chưa có, tạo mới với giá trị mặc định
+        existingUser.permissionRequest = {
+          status: 0, // Giá trị mặc định
+          date: null, // Giá trị mặc định
+        };
+      }
+
+      // Cập nhật permissionRequest
+      existingUser.permissionRequest.status = status; // Đặt trạng thái từ request
+      existingUser.permissionRequest.date = new Date(); // Đặt thời gian hiện tại
+
+      // Lưu lại thông tin cập nhật
+      await existingUser.save();
+
+      return res.status(200).json({
+        message: "Permission request updated successfully.",
+        user: existingUser,
+      });
+    } catch (error) {
+      console.error("Failed to update permission request:", error);
+      res
+        .status(500)
+        .json({ error: "Server error while updating permission request" });
+    }
+  },
+  getAllStaffPermissionRequest: async (req, res) => {
+    try {
+      const users = await User.find({ "permissionRequest.status": 1 });
+
+      const userWithAddresses = await Promise.all(
+        users.map(async (user) => {
+          try {
+            // Giả định rằng hàm buildFullAddress nhận mã địa chỉ
+            const fullAddress = await buildFullAddress(user.address);
+
+            // Tính số lượng phòng cho rạp này
+
+            return {
+              ...user.toObject(),
+              fullAddress, // Thêm địa chỉ đầy đủ vào kết quả
+            };
+          } catch (err) {
+            console.error("Error in constructing address for user:", user, err);
+            return {
+              ...user.toObject(),
+              fullAddress: "Address not found", // Trả về thông báo lỗi nếu có
+            };
+          }
+        })
+      );
+      return res.status(200).send(userWithAddresses);
+    } catch (error) {
+      res.status(500).json({
+        error: "Server error while getting staff with permission request",
+      });
     }
   },
 };
