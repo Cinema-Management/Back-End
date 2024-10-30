@@ -680,7 +680,7 @@ const scheduleController = {
       if (schedules.length === 0) {
         return res.status(200).json([]); // Nếu không có lịch chiếu
       }
-  
+
       // Nhóm lịch chiếu theo ngày và rạp, kết hợp screeningFormatCode, subtitleCode và audioCode
       const groupedSchedules = schedules.reduce((acc, schedule) => {
         const scheduleDate = schedule.date;
