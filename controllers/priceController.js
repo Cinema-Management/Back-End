@@ -439,7 +439,7 @@ const priceController = {
 
       return res.status(201).send(priceDetail);
     } catch (error) {
-      console.error("Error:", error); // Ghi log thông báo lỗi
+      console.error("Error:", error);
       res.status(500).send({ message: error.message });
     }
   },
@@ -560,6 +560,7 @@ const priceController = {
 
   getPriceDetailsFood: async (req, res) => {
     const { productCode } = req.query;
+
     try {
       const priceDetails = await PriceDetail.find({
         productCode: productCode,
@@ -572,7 +573,6 @@ const priceController = {
         select: "code name status startDate endDate type",
         foreignField: "code",
       });
-
       if (
         !priceDetails ||
         priceDetails.length === 0 ||
@@ -695,6 +695,166 @@ const priceController = {
       return res.status(200).send(priceDetail);
     } catch (error) {
       res.status(500).send({ message: error.message });
+    }
+  },
+  addPriceDetailsForCopy: async (req, res) => {
+    const { sourcePriceCode, selectedPriceCodes } = req.body;
+
+    try {
+      // Lấy tất cả chi tiết giá từ bảng giá nguồn
+      const priceDetails = await PriceDetail.find({
+        priceCode: sourcePriceCode,
+      }).populate({
+        path: "priceCode",
+        match: {
+          status: 1,
+        },
+        select: "code name status startDate endDate type",
+        foreignField: "code",
+      });
+
+      if (!priceDetails.length) {
+        return res
+          .status(404)
+          .send({ message: "Không tìm thấy chi tiết giá." });
+      }
+
+      const lastPriceDetailArray = await PriceDetail.findWithDeleted()
+        .sort({ priceDetailId: -1 })
+        .limit(1)
+        .lean();
+
+      const lastPriceDetail = lastPriceDetailArray[0];
+      let newCode = "CTBG01";
+      if (lastPriceDetail && lastPriceDetail.code) {
+        const lastCodeNumber = parseInt(lastPriceDetail.code.substring(4));
+        const nextCodeNumber = lastCodeNumber + 1;
+
+        newCode =
+          nextCodeNumber < 10
+            ? `CTBG0${nextCodeNumber}`
+            : `CTBG${nextCodeNumber}`;
+      }
+
+      for (const targetPriceCode of selectedPriceCodes) {
+        for (const detail of priceDetails) {
+          const { productTypeCode, roomTypeCode, price, description, type } =
+            detail;
+
+          const existingPriceSeat = await PriceDetail.findOne({
+            productTypeCode,
+            priceCode: targetPriceCode,
+            roomTypeCode,
+          });
+
+          if (existingPriceSeat) {
+            continue;
+          }
+
+          const newDetail = new PriceDetail({
+            code: newCode,
+            productTypeCode,
+            roomTypeCode,
+            priceCode: targetPriceCode,
+            price,
+            description,
+            type,
+          });
+
+          await newDetail.save();
+
+          const newCodeNumber = parseInt(newCode.substring(4)) + 1;
+          newCode =
+            newCodeNumber < 10
+              ? `CTBG0${newCodeNumber}`
+              : `CTBG${newCodeNumber}`;
+        }
+      }
+
+      return res
+        .status(201)
+        .send({ message: "Đã sao chép chi tiết giá thành công." });
+    } catch (error) {
+      console.error("Lỗi:", error);
+      return res.status(500).send({ message: error.message });
+    }
+  },
+  addPriceFoodDetailsForCopy: async (req, res) => {
+    const { sourcePriceCode, selectedPriceCodes } = req.body;
+
+    try {
+      const priceDetails = await PriceDetail.find({
+        priceCode: sourcePriceCode,
+      }).populate({
+        path: "priceCode",
+        match: {
+          status: 1,
+        },
+        select: "code name status startDate endDate type",
+        foreignField: "code",
+      });
+
+      if (!priceDetails.length) {
+        return res
+          .status(404)
+          .send({ message: "Không tìm thấy chi tiết giá." });
+      }
+
+      const lastPriceDetailArray = await PriceDetail.findWithDeleted()
+        .sort({ priceDetailId: -1 })
+        .limit(1)
+        .lean();
+
+      const lastPriceDetail = lastPriceDetailArray[0];
+      let newCode = "CTBG01";
+      if (lastPriceDetail && lastPriceDetail.code) {
+        const lastCodeNumber = parseInt(lastPriceDetail.code.substring(4));
+        const nextCodeNumber = lastCodeNumber + 1;
+
+        newCode =
+          nextCodeNumber < 10
+            ? `CTBG0${nextCodeNumber}`
+            : `CTBG${nextCodeNumber}`;
+      }
+
+      for (const targetPriceCode of selectedPriceCodes) {
+        for (const detail of priceDetails) {
+          const { productCode, price, description, type } = detail;
+
+          const existingPriceSeat = await PriceDetail.findOne({
+            productCode,
+            priceCode: targetPriceCode,
+          });
+
+          if (existingPriceSeat) {
+            continue;
+          }
+
+          const newDetail = new PriceDetail({
+            code: newCode,
+            productCode,
+            priceCode: targetPriceCode,
+            price,
+            description,
+            type,
+          });
+
+          await newDetail.save();
+
+          const newCodeNumber = parseInt(newCode.substring(4)) + 1;
+          newCode =
+            newCodeNumber < 10
+              ? `CTBG0${newCodeNumber}`
+              : `CTBG${newCodeNumber}`;
+        }
+      }
+
+      return res
+        .status(201)
+        .send({ message: "Đã sao chép chi tiết giá thành công." });
+    } catch (error) {
+      console.error("Lỗi:", error);
+      return res.status(500).send({ message: error.message });
     }
   },
 };

@@ -5,6 +5,8 @@ router.post("/", priceController.add);
 router.post("/addPriceFood", priceController.addPriceFood);
 router.post("/addPriceDetailSeat", priceController.addPriceDetailSeat);
 router.post("/addPriceDetailProduct", priceController.addPriceDetailFood);
+router.post("/copyPrice", priceController.addPriceDetailsForCopy);
+router.post("/copyPriceFood", priceController.addPriceFoodDetailsForCopy);
 router.post("/:code", priceController.update);
 router.post("/updateStatus/:code", priceController.updateStatus);
 router.post("/updateDetail/:code", priceController.updateDetail);
