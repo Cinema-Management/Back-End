@@ -7,6 +7,8 @@ router.post("/signupStaff", userController.signupStaff);
 router.post("/login", userController.login);
 router.post("/forgotPassword", userController.forgotPassword);
 router.post("/addStaff", userController.addStaff);
+router.post("/addCustomer", userController.addCustomer);
+
 router.post("/checkUserStatusByPhone", userController.checkUserStatusByPhone);
 
 router.get("/", userController.getAllUser);
