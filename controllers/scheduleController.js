@@ -670,6 +670,30 @@ const scheduleController = {
         return res.status(200).json([]);
       }
 
+      // Get all hierarchy values and map them by code for fast lookup
+      const hierarchyValues = await HierarchyValue.find();
+      const hierarchyMap = hierarchyValues.reduce((map, value) => {
+        map[value.code] = value;
+        return map;
+      }, {});
+
+      // Function to build address from hierarchy map
+      const buildAddress = (code) => {
+        const addressParts = [];
+        let currentCode = code;
+        let provinceName = "";
+
+        while (currentCode && hierarchyMap[currentCode]) {
+          const hierarchy = hierarchyMap[currentCode];
+          addressParts.push(hierarchy.name);
+          provinceName = hierarchy.name;
+          currentCode = hierarchy.parentCode;
+        }
+
+        return { address: addressParts.join(", "), provinceName };
+      };
+
+      // Group schedules by date and cinema, combining screeningFormatCode, subtitleCode, and audioCode
       const groupedSchedules = schedules.reduce((acc, schedule) => {
         const scheduleDate = schedule.date;
         const room = schedule.roomCode;
