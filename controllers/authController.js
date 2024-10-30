@@ -213,10 +213,36 @@ const authController = {
         path: "/",
         sameSite: "strict",
       });
-
+      console.log("aaaaaaa", newAccessToken);
       // Trả về access token mới
       return res.status(200).json({
         accessToken: newAccessToken,
+      });
+    });
+  },
+  requestRefreshTokenApp: async (req, res) => {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(401).json({ message: "You're not authenticated" });
+    }
+
+    jwt.verify(refreshToken, process.env.JWT_REFRESH_KEY, (err, user) => {
+      if (err) {
+        console.error("Token verification failed:", err);
+        return res.status(403).json({ message: "Token verification failed" });
+      }
+
+      refreshTokens = refreshTokens.filter((token) => token !== refreshToken);
+
+      const newAccessToken = authController.generateAccessToken(user);
+      const newRefreshToken = authController.generateRefreshToken(user);
+
+      refreshTokens.push(newRefreshToken);
+
+      return res.status(200).json({
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
       });
     });
   },
