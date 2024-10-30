@@ -18,15 +18,28 @@ const salesInvoiceController = {
       const today = new Date();
       const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
 
-      // Tìm tất cả hóa đơn đã tồn tại cho ngày hôm nay
-      const invoiceCount = await SalesInvoice.countDocuments({
-        code: { $regex: `^HDB${formattedDate}-` }, // Sửa regex để khớp định dạng HDBYYYY-MM-DD-
-      });
+      // Tìm mã hóa đơn cuối cùng cho ngày hôm nay
+      const lastInvoice = await SalesInvoice.findOne({
+        code: { $regex: `^HDB${formattedDate}-` }, // Lọc theo ngày
+      }).sort({ salesInvoiceId: -1 });
 
-      // Tạo mã code mới
-      const newInvoiceNumber = invoiceCount + 1; // Tăng số đếm
+      let newCode = `HDB${formattedDate}-01`; // Mã mặc định nếu không có hóa đơn nào
+      console.log(lastInvoice);
 
-      const code = `HDB${formattedDate}-${newInvoiceNumber}`; // Định dạng mã
+      if (lastInvoice) {
+        // Tách mã hóa đơn để lấy số
+        const lastCodeNumber = parseInt(lastInvoice.code.substring(14)); // Lấy phần cuối cùng
+        console.log(lastCodeNumber);
+
+        // Tăng số lên 1
+        const nextCodeNumber = lastCodeNumber + 1;
+
+        // Tạo mã mới với số đã tăng
+        newCode =
+          nextCodeNumber < 10
+            ? `HDB${formattedDate}-0${nextCodeNumber}` // Thêm số 0 nếu nhỏ hơn 10
+            : `HDB${formattedDate}-${nextCodeNumber}`;
+      }
 
       if (type === 0) {
         const schedule = await Schedule.findOne({ code: scheduleCode });
@@ -36,7 +49,7 @@ const salesInvoiceController = {
       }
 
       const salesInvoice = new SalesInvoice({
-        code,
+        code: newCode,
         staffCode,
         customerCode,
         scheduleCode,
@@ -158,6 +171,73 @@ const salesInvoiceController = {
       return res.status(200).json(responseObject);
     } catch (error) {
       return res.status(500).json({ message: error.message });
+    }
+  },
+  getInvoiceSaleByCustomerCode: async (req, res) => {
+    try {
+      const { code } = req.params;
+      console.log(code);
+      const invoices = await SalesInvoice.find({
+        customerCode: code,
+      })
+        .populate({
+          path: "scheduleCode",
+          foreignField: "code",
+          populate: [
+            {
+              path: "roomCode",
+              select: "cinemaCode name",
+              foreignField: "code",
+              populate: {
+                path: "cinemaCode",
+                select: "name",
+                foreignField: "code",
+              },
+            },
+            {
+              path: "movieCode",
+              select: "name ageRestriction image",
+              foreignField: "code",
+            },
+            {
+              path: "screeningFormatCode",
+              select: "name",
+              foreignField: "code",
+            },
+          ],
+        })
+        .populate({
+          path: "customerCode",
+          select: "name phone",
+          foreignField: "code",
+        });
+      const result = await Promise.all(
+        invoices.map(async (invoice) => {
+          const details = await SalesInvoiceDetail.find({
+            salesInvoiceCode: invoice.code,
+          }).populate({
+            path: "productCode",
+            select: "name seatNumber type description",
+            foreignField: "code",
+          });
+          const promotionResults = await PromotionResult.findOne({
+            salesInvoiceCode: invoice.code,
+          });
+          const discountAmount = promotionResults
+            ? promotionResults.discountAmount
+            : 0;
+          return {
+            ...invoice.toObject(),
+            details,
+            discountAmount: discountAmount,
+          };
+        })
+      );
+
+      res.status(200).json(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Server error", error: error.message });
     }
   },
 };
