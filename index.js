@@ -32,6 +32,8 @@ const returnInvoiceRoute = require("./routes/returnInvoiceRoute");
 const returnInvoiceDetailRoute = require("./routes/returnInvoiceDetailRoute");
 const promotionResultRoute = require("./routes/promotionResultRoute");
 const locationRoute = require("./routes/locationRoute");
+const paymentAppRoute = require("./routes/paymentAppRoute");
+const paymentWebRoute = require("./routes/paymentWebRoute");
 const cookieParser = require("cookie-parser");
 
 const IP = process.env.IP;
@@ -82,8 +84,13 @@ app.use("/api/return-invoices", returnInvoiceRoute);
 app.use("/api/return-invoices-details", returnInvoiceDetailRoute);
 app.use("/api/promotion-results", promotionResultRoute);
 app.use("/api/locations", locationRoute);
+app.use("/api/app", paymentAppRoute);
+app.use("/api/web", paymentWebRoute);
+
+
+
 app.get("/", (req, res) => {
-  return res.send("Hello World");
+  return res.send("Hello World tùng nè");
 });
 
 app.use(function (req, res) {
