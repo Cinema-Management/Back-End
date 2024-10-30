@@ -1,3 +1,4 @@
+const { name } = require("ejs");
 const Cinema = require("../models/Cinema");
 const HierarchyValue = require("../models/HierarchyValue");
 
@@ -83,7 +84,7 @@ const hierarchyValueController = {
       }
 
       const code = await hierarchyValueController.generateCode(
-        name.trim(),
+        name,
         parentCode,
         level
       );
