@@ -181,8 +181,30 @@ const userController = {
 
   getAllUser: async (req, res) => {
     try {
-      const user = await User.find({ type: 0 });
-      return res.status(200).send(user);
+      const users = await User.find({ type: 0 });
+
+      const userWithAddresses = await Promise.all(
+        users.map(async (user) => {
+          try {
+            // Giả định rằng hàm buildFullAddress nhận mã địa chỉ
+            const fullAddress = await buildFullAddress(user.address);
+
+            // Tính số lượng phòng cho rạp này
+
+            return {
+              ...user.toObject(),
+              fullAddress, // Thêm địa chỉ đầy đủ vào kết quả
+            };
+          } catch (err) {
+            console.error("Error in constructing address for user:", user, err);
+            return {
+              ...user.toObject(),
+              fullAddress: "Address not found", // Trả về thông báo lỗi nếu có
+            };
+          }
+        })
+      );
+      return res.status(200).send(userWithAddresses);
     } catch (error) {
       res.status(500).json({ error: "Server getUser error" });
     }
@@ -290,6 +312,76 @@ const userController = {
     } catch (error) {
       console.error("Đăng ký thất bại:", error);
       res.status(500).json({ error: "Server signup error" });
+    }
+  },
+  addCustomer: async (req, res) => {
+    try {
+      const { name, birthDate, gender, phone, email, address } = req.body;
+
+      const salt = bcrypt.genSaltSync(10);
+
+      const hashPassword = bcrypt.hashSync("1111", salt);
+
+      const existingUser = await User.findOne({
+        $or: [
+          { phone: phone, type: 0 },
+          { email: email, type: 0 },
+        ],
+      });
+
+      if (existingUser) {
+        return res.status(400).send({
+          error: "A user with the same type, phone, or email already exists.",
+        });
+      }
+
+      let prefix = "KH";
+
+      // Lấy tất cả tài liệu người dùng đã tồn tại
+      const allUsers = await User.findWithDeleted();
+
+      // Tạo mã mới
+      let newCode = `${prefix}01`; // Bắt đầu với 01
+      let existingCodes = new Set();
+
+      // Thu thập các mã đã tồn tại
+      allUsers.forEach((user) => {
+        if (user.code.startsWith(prefix)) {
+          existingCodes.add(user.code);
+        }
+      });
+
+      // Tăng số thứ tự nếu mã đã tồn tại
+      let lastCodeNumber = 1;
+      while (existingCodes.has(newCode)) {
+        lastCodeNumber++;
+        newCode = `${prefix}${String(lastCodeNumber).padStart(2, "0")}`; // Đảm bảo có 2 chữ số
+      }
+
+      const user = new User({
+        code: newCode,
+        name: name,
+        birthDate: birthDate,
+        gender: gender,
+        address,
+        avatar:
+          "https://i.pinimg.com/564x/7b/8f/3a/7b8f3a829162b7656214494b0b87e4e0.jpg",
+        password: hashPassword,
+        phone: phone,
+        email: email,
+        status: 0,
+        type: 0,
+      });
+
+      // Lưu user vào cơ sở dữ liệu
+      await user.save();
+
+      //Hidden password
+      const { password, ...others } = user._doc;
+
+      return res.status(200).json({ ...others });
+    } catch (error) {
+      res.status(500).json({ error: "Add error" });
     }
   },
   checkUserStatusByPhone: async (req, res) => {
