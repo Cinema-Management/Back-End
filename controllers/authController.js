@@ -117,7 +117,7 @@ const authController = {
       if (email) {
         user = await User.findOne({ email: email });
       } else if (phone) {
-        user = await User.findOne({ phone: phone });
+        user = await User.findOne({ phone: phone, type: type });
       } else {
         return res
           .status(400)

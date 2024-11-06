@@ -21,7 +21,11 @@ router.get(
   "/getSchedulesByDateAndMovie",
   scheduleController.getSchedulesByDateAndMovie
 );
-
+router.get("/:code", scheduleController.checkScheduleByMovieCode);
+router.get(
+  "/getScheduleByCode/:code",
+  scheduleController.checkScheduleByMovieCodeDate
+);
 router.post("/", scheduleController.add);
 router.put("/status/:code", scheduleController.updateStatus);
 router.put("/:code", scheduleController.update);
