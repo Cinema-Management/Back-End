@@ -1,9 +1,10 @@
 const axios = require("axios");
 
 const router = require("express").Router();
-const qs = require('qs')
+const qs = require("qs");
 const CryptoJS = require("crypto-js"); // npm install crypto-js
 const moment = require("moment"); // npm install moment
+const SeatStatusInSchedule = require("../models/SeatStatusInSchedule");
 
 // router.post("/", async (req, res) => {
 //   //https://developers.momo.vn/#/docs/en/aiov2/?id=payment-method
@@ -103,40 +104,38 @@ const moment = require("moment"); // npm install moment
 //   }
 // });
 
-
-
 const config = {
   app_id: "2553",
   key1: "PcY4iZIKFCIdgZvA6ueMcMHHUbRLYjPL",
   key2: "kLtgPl8HHhfvMuDHPwKfgfsY4Ydm9eIz",
   endpoint: "https://sb-openapi.zalopay.vn/v2/create",
-  endpointCheck:'https://sb-openapi.zalopay.vn/v2/query'
+  endpointCheck: "https://sb-openapi.zalopay.vn/v2/query",
 };
 
 router.post("/payment", async (req, res) => {
+  // const { expire_duration_seconds } = req.body;
+  const { amount } = req.body;
   const embed_data = {
-    // redirecturl: "https://acdf-2405-4802-90d9-e0f0-c969-251e-bb6d-afb5.ngrok-free.app",
     redirecturl: process.env.URL_EXPO,
-
   };
 
-  const items = [{}];
+  const items = [{}]; // Cần điền thông tin ghế hoặc sản phẩm thực tế
   const transID = Math.floor(Math.random() * 1000000);
   const order = {
     app_id: config.app_id,
-    app_trans_id: `${moment().format("YYMMDD")}_${transID}`, // translation missing: vi.docs.shared.sample_code.comments.app_trans_id
+    app_trans_id: `${moment().format("YYMMDD")}_${transID}`,
     app_user: "user123",
-    app_time: Date.now(), // miliseconds
+    app_time: Date.now(), // milliseconds
     item: JSON.stringify(items),
+    // expire_duration_seconds: expire_duration_seconds,
     embed_data: JSON.stringify(embed_data),
-    amount: 50000,
-    description: `Lazada - Payment for the order #${transID}`,
-    bank_code: "",
-    callback_url:`${process.env.URL_CALLBACK}/api/callback`,
-
+    amount: amount || 10000,
+    description: `TD Cinema - Thanh toán đơn hàng #${transID}`,
+    bank_code: "zalopayapp",
+    callback_url: `${process.env.URL_CALLBACK}/api/callback`,
   };
 
-  // appid|app_trans_id|appuser|amount|apptime|embeddata|item
+  // Tạo chuỗi dữ liệu để mã hóa HMAC
   const data =
     config.app_id +
     "|" +
@@ -154,11 +153,18 @@ router.post("/payment", async (req, res) => {
   order.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
 
   try {
+    // Gửi yêu cầu thanh toán tới dịch vụ
     const result = await axios.post(config.endpoint, null, { params: order });
     console.log("-------------------Success-----------------");
+
+    // Sau khi gửi yêu cầu thanh toán, thực hiện kiểm tra trạng thái ghế
+
+    console.log("order:", result.data);
+
+    // Trả về kết quả thanh toán
     return res.status(200).json(result.data);
-     
   } catch (error) {
+    console.error("Error during payment process:", error);
     return res.status(500).json({
       statusCode: 500,
       message: "Internal Server Error",
@@ -167,76 +173,71 @@ router.post("/payment", async (req, res) => {
 });
 
 router.post("/callback", async (req, res) => {
-    let result = {};
+  let result = {};
 
-    try {
-      let dataStr = req.body.data;
-      let reqMac = req.body.mac;
-  
-      let mac = CryptoJS.HmacSHA256(dataStr, config.key2).toString();
-      console.log("mac =", mac);
-  
-  
-      // kiểm tra callback hợp lệ (đến từ ZaloPay server)
-      if (reqMac !== mac) {
-        // callback không hợp lệ
-        result.return_code = -1;
-        result.return_message = "mac not equal";
-      }
-      else {
-        // thanh toán thành công
-        // merchant cập nhật trạng thái cho đơn hàng
-        let dataJson = JSON.parse(dataStr, config.key2);
-        console.log("update order's status = success where app_trans_id =", dataJson["app_trans_id"]);
-  
-        result.return_code = 1;
-        result.return_message = "success";
-      }
-    } catch (ex) {
-      result.return_code = 0; // ZaloPay server sẽ callback lại (tối đa 3 lần)
-      result.return_message = ex.message;
+  try {
+    let dataStr = req.body.data;
+    let reqMac = req.body.mac;
+
+    let mac = CryptoJS.HmacSHA256(dataStr, config.key2).toString();
+    console.log("mac =", mac);
+
+    // kiểm tra callback hợp lệ (đến từ ZaloPay server)
+    if (reqMac !== mac) {
+      // callback không hợp lệ
+      result.return_code = -1;
+      result.return_message = "mac not equal";
+    } else {
+      // thanh toán thành công
+      // merchant cập nhật trạng thái cho đơn hàng
+      let dataJson = JSON.parse(dataStr, config.key2);
+      console.log(
+        "update order's status = success where app_trans_id =",
+        dataJson["app_trans_id"]
+      );
+
+      result.return_code = 1;
+      result.return_message = "success";
     }
-  
-    // thông báo kết quả cho ZaloPay server
-    res.json(result);
-  });
-  router.post("/order-status/:app_tran_id", async (req, res) => {
-
-    const {app_tran_id} =req.params;
-
-    
-    let postData = {
-      app_id: config.app_id,
-      app_trans_id: app_tran_id, // Input your app_trans_id
+  } catch (ex) {
+    result.return_code = 0; // ZaloPay server sẽ callback lại (tối đa 3 lần)
+    result.return_message = ex.message;
   }
-  
+
+  // thông báo kết quả cho ZaloPay server
+  res.json(result);
+});
+router.post("/order-status/:app_tran_id", async (req, res) => {
+  const { app_tran_id } = req.params;
+
+  let postData = {
+    app_id: config.app_id,
+    app_trans_id: app_tran_id, // Input your app_trans_id
+  };
+
   let data = postData.app_id + "|" + postData.app_trans_id + "|" + config.key1; // appid|app_trans_id|key1
   postData.mac = CryptoJS.HmacSHA256(data, config.key1).toString();
-  
-  
+
   let postConfig = {
-      method: 'post',
-      url: config.endpointCheck,
-      headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      data: qs.stringify(postData)
+    method: "post",
+    url: config.endpointCheck,
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    data: qs.stringify(postData),
   };
-  
- try {
-  const result = await axios(postConfig);
-  console.log("-------------------Success Check Order-----------------");
-  console.log(result.data);
-  return res.status(200).json(result.data);
- } catch (error) {
+
+  try {
+    const result = await axios(postConfig);
+    console.log("-------------------Success Check Order-----------------");
+    console.log(result.data);
+    return res.status(200).json(result.data);
+  } catch (error) {
     console.log(error);
-  return res.status(500).json({
-    statusCode: 500,
-    message: "Internal Server Error",
-  });
-
- }
-
+    return res.status(500).json({
+      statusCode: 500,
+      message: "Internal Server Error",
+    });
   }
-);
+});
 module.exports = router;
