@@ -96,12 +96,6 @@ const movieController = {
         return res.status(404).json({ message: "Movie not found" });
       }
 
-      if (movie.status !== 0) {
-        return res
-          .status(401)
-          .json({ message: "Active movie cannot be deleted" });
-      }
-
       const deletedMovie = await Movie.delete({ code: code });
 
       return res.status(200).json({

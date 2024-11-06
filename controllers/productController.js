@@ -10,37 +10,33 @@ const Price = require("../models/Price");
 const PriceDetail = require("../models/PriceDetail");
 
 function determineTimeSlot(startTime, dayOfWeek) {
-  // Nếu là thứ Hai (dayOfWeek = 2), trả về 1 cho 'Cả ngày'
   if (dayOfWeek === 2) {
-    return 1; // Cả ngày
+    return 1;
   }
 
-  const hour = new Date(startTime).getHours(); // Lấy giờ từ startTime
+  const hour = new Date(startTime).getHours();
   if (hour < 17) {
-    return 2; // Trước 17h
+    return 2;
   }
-  return 3; // Sau 17h
+  return 3;
 }
 const productController = {
   generateSeat: async (req, res) => {
     try {
       const { roomCode, roomSizeCode } = req.body;
 
-      // Kiểm tra Room có tồn tại không
       const room = await Room.findOne({ code: roomCode });
       if (!room) {
         return res.status(404).json({ message: "Room not found" });
       }
 
-      // Kiểm tra RoomSize có tồn tại không
       const roomSize = await RoomSize.findOne({ code: roomSizeCode });
       if (!roomSize) {
         return res.status(404).json({ message: "RoomSize not found" });
       }
 
-      // Xác định số lượng hàng, cột dựa trên kích cỡ phòng
       let rows, columns;
-      const roomSizeName = roomSize.name.toLowerCase(); // Chuyển thành chữ thường để so sánh
+      const roomSizeName = roomSize.name.toLowerCase();
       if (roomSizeName === "nhỏ") {
         rows = 6;
         columns = 8;
@@ -54,44 +50,38 @@ const productController = {
         return res.status(400).json({ message: "Invalid room size name" });
       }
 
-      // Tạo ghế dựa trên quy tắc
       for (let row = 1; row <= rows; row++) {
-        let isLastRow = row === rows; // Kiểm tra xem có phải dòng cuối không
+        let isLastRow = row === rows;
 
         for (let col = 1; col <= columns; col++) {
-          let productTypeCode = "LSP01"; // Ghế thường
+          let productTypeCode = "LSP01";
           let seatImage =
-            "https://td-cinemas.s3.ap-southeast-1.amazonaws.com/Seat.png"; // Hình ghế thường
-          let seatName = "Ghế Thường"; // Tên mặc định ghế thường
+            "https://td-cinemas.s3.ap-southeast-1.amazonaws.com/Seat.png";
+          let seatName = "Ghế Thường";
 
-          // Phòng nhỏ: tất cả là ghế VIP
           if (roomSizeName === "nhỏ") {
-            productTypeCode = "LSP02"; // Ghế VIP
+            productTypeCode = "LSP02";
             seatImage =
-              "https://td-cinemas.s3.ap-southeast-1.amazonaws.com/seat_vip.png"; // Hình ghế VIP
-            seatName = "Ghế VIP"; // Tên ghế VIP
+              "https://td-cinemas.s3.ap-southeast-1.amazonaws.com/seat_vip.png";
+            seatName = "Ghế VIP";
           } else if (roomSizeName === "vừa" || roomSizeName === "lớn") {
-            // Phòng vừa và lớn:
             if (isLastRow) {
-              // Hàng cuối cùng là ghế đôi
               if (col % 2 === 1) {
-                productTypeCode = "LSP03"; // Ghế đôi
+                productTypeCode = "LSP03";
                 seatImage =
-                  "https://td-cinemas.s3.ap-southeast-1.amazonaws.com/seat_couple.png"; // Hình ghế đôi
-                seatName = "Ghế đôi"; // Tên ghế đôi
+                  "https://td-cinemas.s3.ap-southeast-1.amazonaws.com/seat_couple.png";
+                seatName = "Ghế đôi";
               } else {
-                continue; // Bỏ qua cột ghế thứ 2 của ghế đôi
+                continue;
               }
             } else if (row > 3) {
-              // Các hàng sau hàng thứ 3 là ghế VIP
-              productTypeCode = "LSP02"; // Ghế VIP
+              productTypeCode = "LSP02";
               seatImage =
-                "https://td-cinemas.s3.ap-southeast-1.amazonaws.com/seat_vip.png"; // Hình ghế VIP
-              seatName = "Ghế VIP"; // Tên ghế VIP
+                "https://td-cinemas.s3.ap-southeast-1.amazonaws.com/seat_vip.png";
+              seatName = "Ghế VIP";
             }
           }
 
-          // Tạo mã tự động cho sản phẩm (mã ghế)
           const lastProduct = await Product.findOne({ type: 0 }).sort({
             productId: -1,
           });
@@ -499,7 +489,8 @@ const productController = {
       if (existName) {
         return res.status(401).json({ message: "Sản phẩm đã tồn tại!" });
       }
-      let parsedComboItems = comboItems;
+      let parsedComboItems = comboItems || [];
+      console.log("parsedComboItems:", parsedComboItems);
       if (typeof comboItems === "string") {
         try {
           parsedComboItems = JSON.parse(comboItems);
@@ -512,33 +503,31 @@ const productController = {
         console.log("comboItems is already an array:", parsedComboItems);
       }
 
-      if (!Array.isArray(parsedComboItems) || parsedComboItems.length === 0) {
-        return res
-          .status(400)
-          .json({ message: "comboItems must be a non-empty array." });
-      }
+      if (Array.isArray(parsedComboItems) && parsedComboItems.length > 0) {
+        const codes = parsedComboItems.map((item) => item.code);
+        const existingCombo = await Product.find({ code: { $in: codes } });
 
-      const codes = parsedComboItems.map((item) => item.code);
-      const existingCombo = await Product.find({ code: { $in: codes } });
+        if (existingCombo.length !== codes.length) {
+          const foundCodes = existingCombo.map((product) => product.code);
+          const missingCodes = codes.filter(
+            (code) => !foundCodes.includes(code)
+          );
+          return res.status(404).json({
+            message: `Products with codes ${missingCodes.join(
+              ", "
+            )} do not exist.`,
+          });
+        }
 
-      if (existingCombo.length !== codes.length) {
-        const foundCodes = existingCombo.map((product) => product.code);
-        const missingCodes = codes.filter((code) => !foundCodes.includes(code));
-        return res.status(404).json({
-          message: `Products with codes ${missingCodes.join(
-            ", "
-          )} do not exist.`,
-        });
-      }
-
-      for (const item of parsedComboItems) {
-        if (
-          item.quantity !== undefined &&
-          (typeof item.quantity !== "number" || item.quantity < 1)
-        ) {
-          return res
-            .status(400)
-            .json({ message: "Quantity must be a positive number." });
+        for (const item of parsedComboItems) {
+          if (
+            item.quantity !== undefined &&
+            (typeof item.quantity !== "number" || item.quantity < 1)
+          ) {
+            return res
+              .status(400)
+              .json({ message: "Quantity must be a positive number." });
+          }
         }
       }
       let imageUrl = "";
@@ -560,7 +549,7 @@ const productController = {
         product.image = imageUrl;
       }
 
-      if (Array.isArray(parsedComboItems)) {
+      if (Array.isArray(parsedComboItems) && parsedComboItems.length > 0) {
         product.comboItems = parsedComboItems;
       }
       if (type && type !== product.type) {
@@ -706,12 +695,6 @@ const productController = {
 
       if (!product) {
         return res.status(404).json({ message: "Product not found" });
-      }
-
-      if (product.status !== 0) {
-        return res
-          .status(401)
-          .json({ message: "Active product cannot be deleted" });
       }
 
       const deletedProduct = await Product.delete({ code: code });
