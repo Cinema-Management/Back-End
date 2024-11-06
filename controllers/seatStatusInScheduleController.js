@@ -78,7 +78,6 @@ const seatStatusInScheduleController = {
   getAllSeatsStatusInScheduleCode: async (req, res) => {
     try {
       const { scheduleCode } = req.query;
-      
 
       const schedule = await Schedule.findOne({ code: scheduleCode });
       if (!schedule) {
@@ -182,10 +181,36 @@ const seatStatusInScheduleController = {
         })
       );
 
+      setTimeout(async () => {
+        const { scheduleCode, arrayCode } = req.body;
+
+        const seatStatuses = await SeatStatusInSchedule.find({
+          productCode: { $in: arrayCode },
+          scheduleCode: scheduleCode,
+        });
+
+        const updatedSeatStatuses1 = await Promise.all(
+          seatStatuses.map(async (item) => {
+            if (item.status === 2) {
+              item.status = 1;
+              return await item.save();
+            }
+            return item;
+          })
+        );
+
+        console.log(
+          "Ghế đã được cập nhật:",
+          updatedSeatStatuses1.map(
+            (item) => item.status + " " + item.productCode
+          )
+        );
+      }, 10 * 60 * 1000); // Sau 10 phút
+
       return res.status(200).json(updatedSeatStatuses); // Trả về danh sách trạng thái ghế đã được cập nhật
     } catch (error) {
-      console.error("Error updating seat status:", error); // Log lỗi để kiểm tra
-      return res.status(500).json({ message: error.message }); // Trả về lỗi nếu có
+      console.error("Error updating seat status:", error);
+      return res.status(500).json({ message: error.message });
     }
   },
 

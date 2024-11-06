@@ -8,6 +8,7 @@ const User = require("../models/User");
 const Cinema = require("../models/Cinema");
 const { get } = require("mongoose");
 const PromotionResult = require("../models/PromotionResult");
+const PriceDetail = require("../models/PriceDetail");
 
 const salesInvoiceController = {
   add: async (req, res) => {
@@ -63,6 +64,162 @@ const salesInvoiceController = {
       return res.status(400).send(error);
     }
   },
+  addWithDetail: async (req, res) => {
+    try {
+      const {
+        staffCode,
+        customerCode,
+        scheduleCode,
+        paymentMethod,
+        type,
+        salesInvoiceDetails,
+      } = req.body;
+
+      const today = new Date();
+      const formattedDate = today.toISOString().split("T")[0]; // YYYY-MM-DD
+
+      const lastInvoice = await SalesInvoice.findOne({
+        code: { $regex: `^HDB${formattedDate}-` },
+      }).sort({ salesInvoiceId: -1 });
+
+      let newCode = `HDB${formattedDate}-01`;
+      if (lastInvoice) {
+        const lastCodeNumber = parseInt(lastInvoice.code.substring(14));
+        const nextCodeNumber = lastCodeNumber + 1;
+        newCode =
+          nextCodeNumber < 10
+            ? `HDB${formattedDate}-0${nextCodeNumber}`
+            : `HDB${formattedDate}-${nextCodeNumber}`;
+      }
+
+      if (type === 0) {
+        const schedule = await Schedule.findOne({ code: scheduleCode });
+        if (!schedule) {
+          return res.status(404).send({ message: "Schedule not found" });
+        }
+      }
+
+      const salesInvoice = new SalesInvoice({
+        code: newCode,
+        staffCode,
+        customerCode,
+        scheduleCode,
+        paymentMethod,
+        type,
+      });
+
+      await salesInvoice.save();
+
+      const savedDetails = [];
+      if (salesInvoiceDetails && Array.isArray(salesInvoiceDetails)) {
+        for (const detail of salesInvoiceDetails) {
+          const { productCode, priceDetailCode, quantity } = detail;
+
+          const invoiceCount = await SalesInvoiceDetail.countDocuments({
+            code: { $regex: `^CTHDB${formattedDate}-` },
+          });
+          const newInvoiceNumber = invoiceCount + 1;
+          const code = `CTHDB${formattedDate}-${newInvoiceNumber}`;
+
+          const priceDetail = await PriceDetail.findOne({
+            code: priceDetailCode,
+          });
+          if (!priceDetail) {
+            return res.status(404).send({ message: "Price detail not found" });
+          }
+
+          const salesInvoiceDetail = new SalesInvoiceDetail({
+            code,
+            salesInvoiceCode: newCode,
+            productCode,
+            priceDetailCode,
+            quantity,
+          });
+          await salesInvoiceDetail.save();
+          savedDetails.push(salesInvoiceDetail);
+        }
+      }
+
+      // Populate related data for the created invoice
+      const populatedInvoice = await SalesInvoice.findOne({ code: newCode })
+        .populate({
+          path: "scheduleCode",
+          foreignField: "code",
+          populate: [
+            {
+              path: "roomCode",
+              select: "cinemaCode name",
+              foreignField: "code",
+              populate: {
+                path: "cinemaCode",
+                select: "name",
+                foreignField: "code",
+              },
+            },
+            {
+              path: "movieCode",
+              select: "name ageRestriction image",
+              foreignField: "code",
+            },
+            {
+              path: "screeningFormatCode",
+              select: "name",
+              foreignField: "code",
+            },
+            {
+              path: "subtitleCode",
+              select: "name",
+              foreignField: "code",
+            },
+            {
+              path: "audioCode",
+              select: "name",
+              foreignField: "code",
+            },
+          ],
+        })
+        .populate({
+          path: "customerCode",
+          select: "name phone",
+          foreignField: "code",
+        });
+
+      const details = await Promise.all(
+        savedDetails.map(async (detail) => {
+          return await SalesInvoiceDetail.findOne({
+            code: detail.code,
+          }).populate({
+            path: "productCode",
+            select: "name seatNumber type description",
+            foreignField: "code",
+          });
+        })
+      );
+
+      const promotionResults = await PromotionResult.findOne({
+        salesInvoiceCode: newCode,
+      }).populate({
+        path: "freeProductCode",
+        select: "name",
+        foreignField: "code",
+      });
+
+      const result = {
+        ...populatedInvoice.toObject(),
+        details,
+        discountAmount: promotionResults ? promotionResults.discountAmount : 0,
+        freeProductCode: promotionResults
+          ? promotionResults.freeProductCode
+          : null,
+        freeQuantity: promotionResults ? promotionResults.freeQuantity : null,
+      };
+
+      return res.status(201).send(result);
+    } catch (error) {
+      return res.status(400).send({ message: error.message });
+    }
+  },
+
   getAll: async (req, res) => {
     try {
       const invoices = await SalesInvoice.find()
@@ -176,7 +333,6 @@ const salesInvoiceController = {
   getInvoiceSaleByCustomerCode: async (req, res) => {
     try {
       const { code } = req.params;
-      console.log(code);
       const invoices = await SalesInvoice.find({
         customerCode: code,
       })
@@ -204,6 +360,16 @@ const salesInvoiceController = {
               select: "name",
               foreignField: "code",
             },
+            {
+              path: "subtitleCode",
+              select: "name",
+              foreignField: "code",
+            },
+            {
+              path: "audioCode",
+              select: "name",
+              foreignField: "code",
+            },
           ],
         })
         .populate({
@@ -222,14 +388,28 @@ const salesInvoiceController = {
           });
           const promotionResults = await PromotionResult.findOne({
             salesInvoiceCode: invoice.code,
+          }).populate({
+            path: "freeProductCode",
+            select: "name ",
+            foreignField: "code",
           });
+
           const discountAmount = promotionResults
             ? promotionResults.discountAmount
             : 0;
+          const freeProductCode = promotionResults
+            ? promotionResults.freeProductCode
+            : null;
+          const freeQuantity = promotionResults
+            ? promotionResults.freeQuantity
+            : null;
+
           return {
             ...invoice.toObject(),
             details,
             discountAmount: discountAmount,
+            freeProductCode: freeProductCode,
+            freeQuantity: freeQuantity,
           };
         })
       );
@@ -238,6 +418,32 @@ const salesInvoiceController = {
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Server error", error: error.message });
+    }
+  },
+  deleteWithDetailByDate: async (req, res) => {
+    try {
+      const { date } = req.query;
+
+      // Tìm và xóa các hóa đơn có mã bắt đầu bằng ngày hôm nay
+      const deletedInvoices = await SalesInvoice.deleteMany({
+        code: { $regex: `^HDB${date}-` },
+      });
+
+      // Tìm và xóa các chi tiết hóa đơn có mã bắt đầu bằng ngày hôm nay
+      const deletedInvoiceDetails = await SalesInvoiceDetail.deleteMany({
+        code: { $regex: `^CTHDB${date}-` },
+      });
+
+      return res.status(200).send({
+        message: "Deleted invoices and invoice details for today",
+        deletedInvoicesCount: deletedInvoices.deletedCount,
+        deletedInvoiceDetailsCount: deletedInvoiceDetails.deletedCount,
+      });
+    } catch (error) {
+      return res.status(500).send({
+        message: "Error deleting invoices and invoice details",
+        error: error.message,
+      });
     }
   },
 };
