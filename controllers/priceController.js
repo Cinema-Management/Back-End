@@ -18,35 +18,35 @@ const priceController = {
       } = req.body;
 
       const existingPrice = await Price.findOne({
-        description,
         type,
         timeSlot,
-        dayOfWeek,
+        dayOfWeek: { $in: dayOfWeek },
       });
       const currentDate = new Date();
       const startDateNew = startDate;
       const endDateNew = endDate;
-
       if (existingPrice) {
-        const startDateExisting = new Date(startDate);
-        const endDateExisting = new Date(existingPrice.endDate);
-        if (startDateExisting <= endDateExisting) {
+        if (existingPrice.status === 1) {
+          const startDateExisting = new Date(startDate);
+          const endDateExisting = new Date(existingPrice.endDate);
+          if (startDateExisting <= endDateExisting) {
+            return res.status(400).send({
+              message: "Price description already exists for the same type",
+            });
+          }
+        }
+
+        if (new Date(startDateNew) <= currentDate) {
           return res.status(400).send({
-            message: "Price description already exists for the same type",
+            message: "Start date must be greater than the current date",
           });
         }
-      }
-
-      if (new Date(startDateNew) <= currentDate) {
-        return res.status(400).send({
-          message: "Start date must be greater than the current date",
-        });
-      }
-      if (endDateNew < startDateNew) {
-        return res.status(400).send({
-          message:
-            "The end date must be greater than or equal to the start date",
-        });
+        if (endDateNew < startDateNew) {
+          return res.status(400).send({
+            message:
+              "The end date must be greater than or equal to the start date",
+          });
+        }
       }
       // Lấy Price cuối cùng dựa trên priceId, bao gồm cả những Price đã bị xóa mềm
       const lastPriceArray = await Price.findWithDeleted()
@@ -73,7 +73,7 @@ const priceController = {
         type,
         dayOfWeek,
         timeSlot,
-        status,
+        status: 0,
       });
 
       await price.save();
@@ -86,28 +86,34 @@ const priceController = {
   addPriceFood: async (req, res) => {
     try {
       const { description, startDate, endDate, status, type } = req.body;
-
+      console.log("data", req.body);
       const existingPrice = await Price.findOne({ description, type });
-      if (existingPrice) {
-        return res.status(400).send({
-          message: "Price description already exists for the same type",
-        });
-      }
-
       const currentDate = new Date();
       const startDateNew = startDate;
       const endDateNew = endDate;
-
-      if (new Date(startDateNew) <= currentDate) {
-        return res.status(400).send({
-          message: "Start date must be greater than the current date",
-        });
-      }
-      if (endDateNew < startDateNew) {
-        return res.status(400).send({
-          message:
-            "The end date must be greater than or equal to the start date",
-        });
+      console.log("aa", existingPrice);
+      if (existingPrice && existingPrice.status === 1) {
+        console.log("newCode");
+        if (existingPrice) {
+          const startDateExisting = new Date(startDate);
+          const endDateExisting = new Date(existingPrice.endDate);
+          if (startDateExisting <= endDateExisting) {
+            return res.status(400).send({
+              message: "Price description already exists for the same type",
+            });
+          }
+        }
+        if (new Date(startDateNew) <= currentDate) {
+          return res.status(400).send({
+            message: "Start date must be greater than the current date",
+          });
+        }
+        if (endDateNew < startDateNew) {
+          return res.status(400).send({
+            message:
+              "The end date must be greater than or equal to the start date",
+          });
+        }
       }
 
       const lastPriceArray = await Price.findWithDeleted()
@@ -117,6 +123,7 @@ const priceController = {
       const lastPrice = lastPriceArray[0];
 
       let newCode = "BG01";
+
       if (lastPrice && lastPrice.code) {
         const lastCodeNumber = parseInt(lastPrice.code.substring(2));
 
@@ -154,34 +161,39 @@ const priceController = {
         timeSlot,
       } = req.body;
       const priceCode = req.params.code;
-
       const price = await Price.findOne({ code: priceCode });
       if (!price) {
         return res.status(404).send({ message: "Price not found" });
       }
 
+      const isEndDatePassed = new Date() > new Date(price.endDate);
+      const isStartDatePassed = new Date() < new Date(price.startDate);
       if (price.status === 1) {
-        const currentDate = new Date();
-        const startDateNew = new Date(startDate);
-        const endDateNew = new Date(endDate);
-        const currentDay = new Date(
-          currentDate.getFullYear(),
-          currentDate.getMonth(),
-          currentDate.getDate()
-        );
-        const endDay = new Date(
-          endDateNew.getFullYear(),
-          endDateNew.getMonth(),
-          endDateNew.getDate()
-        );
+        if (isEndDatePassed || isStartDatePassed) {
+          price.status = status;
+        } else {
+          const currentDate = new Date();
+          const startDateNew = new Date(startDate);
+          const endDateNew = new Date(endDate);
+          const currentDay = new Date(
+            currentDate.getFullYear(),
+            currentDate.getMonth(),
+            currentDate.getDate()
+          );
+          const endDay = new Date(
+            endDateNew.getFullYear(),
+            endDateNew.getMonth(),
+            endDateNew.getDate()
+          );
 
-        if (endDay < currentDay) {
-          return res.status(400).send({
-            message:
-              "The end date must be greater than or equal to the start date",
-          });
+          if (endDay < currentDay) {
+            return res.status(400).send({
+              message:
+                "The end date must be greater than or equal to the start date",
+            });
+          }
+          price.endDate = endDateNew;
         }
-        price.endDate = endDateNew;
       } else {
         const currentDate = new Date();
         const startDateNew = new Date(startDate);
@@ -246,7 +258,6 @@ const priceController = {
   getAll: async (req, res) => {
     try {
       const prices = await Price.find().lean();
-
       const priceDetails = await PriceDetail.find({
         priceCode: { $in: prices.map((price) => price.code) },
       })
@@ -322,11 +333,13 @@ const priceController = {
           message: "Price not found",
         });
       }
-
+      const isStartDatePassed = new Date() < new Date(price.startDate);
       if (price.status === 1) {
-        return res.status(400).send({
-          message: "Price is active, cannot be deleted",
-        });
+        if (!isStartDatePassed) {
+          return res.status(400).send({
+            message: "Price is active, cannot be deleted",
+          });
+        }
       }
       await PriceDetail.deleteMany({
         priceCode: priceCode,
@@ -697,13 +710,45 @@ const priceController = {
       res.status(500).send({ message: error.message });
     }
   },
+
   addPriceDetailsForCopy: async (req, res) => {
-    const { sourcePriceCode, selectedPriceCodes } = req.body;
+    const { priceCode } = req.body;
 
     try {
-      // Lấy tất cả chi tiết giá từ bảng giá nguồn
+      const oldPrice = await Price.findOne({ code: priceCode });
+      if (!oldPrice) {
+        return res.status(404).send({
+          message: "Không tìm thấy bảng giá cũ hoặc nó không hoạt động.",
+        });
+      }
+      const lastPriceArray = await Price.findWithDeleted()
+        .sort({ priceId: -1 })
+        .limit(1)
+        .lean();
+      let newPriceCode = "BG01";
+
+      if (lastPriceArray.length > 0 && lastPriceArray[0].code) {
+        const lastCodeNumber = parseInt(lastPriceArray[0].code.substring(2));
+        const nextCodeNumber = lastCodeNumber + 1;
+        newPriceCode =
+          nextCodeNumber < 10 ? `BG0${nextCodeNumber}` : `BG${nextCodeNumber}`;
+      }
+
+      const newPrice = new Price({
+        code: newPriceCode,
+        description: `${oldPrice.description} - Sao chép`,
+        status: 0,
+        dayOfWeek: oldPrice.dayOfWeek,
+        timeSlot: oldPrice.timeSlot,
+        startDate: oldPrice.startDate,
+        endDate: oldPrice.endDate,
+        type: oldPrice.type,
+      });
+
+      await newPrice.save();
+
       const priceDetails = await PriceDetail.find({
-        priceCode: sourcePriceCode,
+        priceCode: priceCode,
       }).populate({
         path: "priceCode",
         match: {
@@ -712,7 +757,6 @@ const priceController = {
         select: "code name status startDate endDate type",
         foreignField: "code",
       });
-
       if (!priceDetails.length) {
         return res
           .status(404)
@@ -735,56 +779,72 @@ const priceController = {
             ? `CTBG0${nextCodeNumber}`
             : `CTBG${nextCodeNumber}`;
       }
+      for (const detail of priceDetails) {
+        const { productTypeCode, roomTypeCode, price, description, type } =
+          detail;
 
-      for (const targetPriceCode of selectedPriceCodes) {
-        for (const detail of priceDetails) {
-          const { productTypeCode, roomTypeCode, price, description, type } =
-            detail;
+        const newDetail = new PriceDetail({
+          code: newCode,
+          productTypeCode,
+          roomTypeCode,
+          priceCode: newPriceCode,
+          price,
+          description,
+          type,
+        });
 
-          const existingPriceSeat = await PriceDetail.findOne({
-            productTypeCode,
-            priceCode: targetPriceCode,
-            roomTypeCode,
-          });
+        await newDetail.save();
 
-          if (existingPriceSeat) {
-            continue;
-          }
-
-          const newDetail = new PriceDetail({
-            code: newCode,
-            productTypeCode,
-            roomTypeCode,
-            priceCode: targetPriceCode,
-            price,
-            description,
-            type,
-          });
-
-          await newDetail.save();
-
-          const newCodeNumber = parseInt(newCode.substring(4)) + 1;
-          newCode =
-            newCodeNumber < 10
-              ? `CTBG0${newCodeNumber}`
-              : `CTBG${newCodeNumber}`;
-        }
+        const newCodeNumber = parseInt(newCode.substring(4)) + 1;
+        newCode =
+          newCodeNumber < 10 ? `CTBG0${newCodeNumber}` : `CTBG${newCodeNumber}`;
       }
 
       return res
         .status(201)
-        .send({ message: "Đã sao chép chi tiết giá thành công." });
+        .send({ message: "Đã sao chép bảng giá và chi tiết giá thành công." });
     } catch (error) {
       console.error("Lỗi:", error);
       return res.status(500).send({ message: error.message });
     }
   },
+
   addPriceFoodDetailsForCopy: async (req, res) => {
-    const { sourcePriceCode, selectedPriceCodes } = req.body;
+    const { priceCode } = req.body;
 
     try {
+      const oldPrice = await Price.findOne({ code: priceCode });
+      if (!oldPrice) {
+        return res.status(404).send({
+          message: "Không tìm thấy bảng giá cũ hoặc nó không hoạt động.",
+        });
+      }
+      const lastPriceArray = await Price.findWithDeleted()
+        .sort({ priceId: -1 })
+        .limit(1)
+        .lean();
+      let newPriceCode = "BG01";
+
+      if (lastPriceArray.length > 0 && lastPriceArray[0].code) {
+        const lastCodeNumber = parseInt(lastPriceArray[0].code.substring(2));
+        const nextCodeNumber = lastCodeNumber + 1;
+        newPriceCode =
+          nextCodeNumber < 10 ? `BG0${nextCodeNumber}` : `BG${nextCodeNumber}`;
+      }
+
+      const newPrice = new Price({
+        code: newPriceCode,
+        description: `${oldPrice.description} - Sao chép`,
+        status: 0,
+        startDate: oldPrice.startDate,
+        endDate: oldPrice.endDate,
+        type: oldPrice.type,
+      });
+
+      await newPrice.save();
+
       const priceDetails = await PriceDetail.find({
-        priceCode: sourcePriceCode,
+        priceCode: priceCode,
       }).populate({
         path: "priceCode",
         match: {
@@ -793,7 +853,6 @@ const priceController = {
         select: "code name status startDate endDate type",
         foreignField: "code",
       });
-
       if (!priceDetails.length) {
         return res
           .status(404)
@@ -816,42 +875,28 @@ const priceController = {
             ? `CTBG0${nextCodeNumber}`
             : `CTBG${nextCodeNumber}`;
       }
+      for (const detail of priceDetails) {
+        const { productCode, price, description, type } = detail;
 
-      for (const targetPriceCode of selectedPriceCodes) {
-        for (const detail of priceDetails) {
-          const { productCode, price, description, type } = detail;
+        const newDetail = new PriceDetail({
+          code: newCode,
+          productCode,
+          priceCode: newPriceCode,
+          price,
+          description,
+          type,
+        });
 
-          const existingPriceSeat = await PriceDetail.findOne({
-            productCode,
-            priceCode: targetPriceCode,
-          });
+        await newDetail.save();
 
-          if (existingPriceSeat) {
-            continue;
-          }
-
-          const newDetail = new PriceDetail({
-            code: newCode,
-            productCode,
-            priceCode: targetPriceCode,
-            price,
-            description,
-            type,
-          });
-
-          await newDetail.save();
-
-          const newCodeNumber = parseInt(newCode.substring(4)) + 1;
-          newCode =
-            newCodeNumber < 10
-              ? `CTBG0${newCodeNumber}`
-              : `CTBG${newCodeNumber}`;
-        }
+        const newCodeNumber = parseInt(newCode.substring(4)) + 1;
+        newCode =
+          newCodeNumber < 10 ? `CTBG0${newCodeNumber}` : `CTBG${newCodeNumber}`;
       }
 
       return res
         .status(201)
-        .send({ message: "Đã sao chép chi tiết giá thành công." });
+        .send({ message: "Đã sao chép bảng giá và chi tiết giá thành công." });
     } catch (error) {
       console.error("Lỗi:", error);
       return res.status(500).send({ message: error.message });
