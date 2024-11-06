@@ -122,13 +122,11 @@ const scheduleController = {
 
       let targetDate = new Date(date);
 
-      // Lùi 7 giờ để chuyển từ giờ Việt Nam về UTC (tránh dùng Date.UTC vì dữ liệu đã lưu dưới dạng UTC)
-      const vietnamTimezoneOffset = -7 * 60; // Phút (-7 giờ)
+      const vietnamTimezoneOffset = -7 * 60;
       targetDate = new Date(
         targetDate.getTime() + vietnamTimezoneOffset * 60 * 1000
       );
 
-      // Tạo mới lịch chiếu
       const newSchedule = new Schedule({
         code: newCode,
         movieCode,
@@ -174,6 +172,36 @@ const scheduleController = {
       return res.status(500).json({ error: error.message });
     }
   },
+  checkScheduleByMovieCode: async (req, res) => {
+    try {
+      const { code } = req.params;
+      const schedules = await Schedule.find({ movieCode: code, status: 1 });
+      if (schedules.length > 0) {
+        return res.status(200).json({ exists: true });
+      } else {
+        return res.status(200).json({ exists: false });
+      }
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  },
+  checkScheduleByMovieCodeDate: async (req, res) => {
+    try {
+      const { code } = req.params;
+
+      const currentDate = new Date();
+      const schedules = await Schedule.find({
+        movieCode: code,
+        status: 1,
+        startTime: { $gte: currentDate },
+      });
+
+      return res.status(200).json({ exists: schedules.length > 0 });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  },
+
   getAllRoomsWithSchedules: async (req, res) => {
     try {
       const { cinemaCode } = req.params;
@@ -181,8 +209,7 @@ const scheduleController = {
 
       let targetDate = new Date(date);
 
-      // Lùi 7 giờ để chuyển từ giờ Việt Nam về UTC (tránh dùng Date.UTC vì dữ liệu đã lưu dưới dạng UTC)
-      const vietnamTimezoneOffset = -7 * 60; // Phút (-7 giờ)
+      const vietnamTimezoneOffset = -7 * 60;
       targetDate = new Date(
         targetDate.getTime() + vietnamTimezoneOffset * 60 * 1000
       );
@@ -622,11 +649,13 @@ const scheduleController = {
   getSchedulesByDateAndMovie: async (req, res) => {
     try {
       const { movieCode, date } = req.query;
-      console.log("aaaa");
+      const currentTime = new Date();
+
+      const minDisplayTime = new Date(currentTime.getTime() + 10 * 60 * 1000);
       const schedules = await Schedule.find({
         date: date,
         movieCode: movieCode,
-        startTime: { $gt: new Date() },
+        startTime: { $gt: minDisplayTime },
         status: { $ne: 0 },
       })
         .populate({
@@ -649,7 +678,7 @@ const scheduleController = {
         })
         .populate({
           path: "movieCode",
-          select: "name",
+          select: "code name ageRestriction image ",
           model: "Movie",
           foreignField: "code",
         })
@@ -730,6 +759,9 @@ const scheduleController = {
             subtitle: schedule.subtitleCode ? schedule.subtitleCode.name : null,
             audio: schedule.audioCode ? schedule.audioCode.name : null,
             movie: schedule.movieCode.name,
+            movieCode: schedule.movieCode.code,
+            ageRestriction: schedule.movieCode.ageRestriction,
+            image: schedule.movieCode.image,
             showtimes: [],
           };
         }
@@ -737,6 +769,7 @@ const scheduleController = {
         acc[scheduleDate].cinemas[cinema.code].screeningFormats[
           formatKey
         ].showtimes.push({
+          date: schedule.date,
           startTime: schedule.startTime,
           endTime: schedule.endTime,
           code: schedule.code,
