@@ -1,6 +1,7 @@
 const HierarchyValue = require("../models/HierarchyValue");
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
+const uploadImageS3 = require("./upLoadImageS3Controller");
 const buildFullAddress = async (currentCode) => {
   const addressParts = [];
 
@@ -161,6 +162,7 @@ const userController = {
   forgotPassword: async (req, res) => {
     try {
       const { password, passwordNew, code } = req.body;
+      console.log("123", password);
       const user = await User.findOne({ code: code });
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -423,11 +425,17 @@ const userController = {
         cinemaCode,
         status,
         isAdmin,
-        type,
       } = req.body;
-
+      let imageUrl = "";
       // Tìm nhân viên theo mã code
-      const existingUser = await User.findOne({ code: code, type: type });
+      const existingUser = await User.findOne({ code: code });
+      if (req.file) {
+        imageUrl = await uploadImageS3(req.file); // Gọi hàm upload ảnh
+        // Cập nhật avatar nếu URL mới khác URL hiện tại
+        if (imageUrl !== existingUser.avatar) {
+          existingUser.avatar = imageUrl;
+        }
+      }
 
       // Kiểm tra nếu nhân viên không tồn tại
       if (!existingUser) {
