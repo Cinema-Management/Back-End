@@ -19,7 +19,7 @@ const checkFileType = (file, cb) => {
 // Cấu hình multer
 const upload = multer({
   storage,
-  limits: { fileSize: 2000000 }, // 2MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 2MB
   fileFilter: (req, file, cb) => {
     checkFileType(file, cb);
   },
