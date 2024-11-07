@@ -175,7 +175,10 @@ const scheduleController = {
   checkScheduleByMovieCode: async (req, res) => {
     try {
       const { code } = req.params;
-      const schedules = await Schedule.find({ movieCode: code, status: 1 });
+      const schedules = await Schedule.find({
+        movieCode: code,
+        status: { $in: [1, 2] },
+      });
       if (schedules.length > 0) {
         return res.status(200).json({ exists: true });
       } else {
@@ -192,10 +195,9 @@ const scheduleController = {
       const currentDate = new Date();
       const schedules = await Schedule.find({
         movieCode: code,
-        status: 1,
+        status: { $in: [1, 2] },
         startTime: { $gte: currentDate },
       });
-
       return res.status(200).json({ exists: schedules.length > 0 });
     } catch (error) {
       return res.status(500).json({ error: error.message });
@@ -512,7 +514,6 @@ const scheduleController = {
   getAllMovieWithSchedules: async (req, res) => {
     try {
       const { status } = req.query;
-
       let targetDate = new Date().setHours(0, 0, 0, 0);
 
       if (status === ("3" || 3)) {
@@ -650,7 +651,6 @@ const scheduleController = {
     try {
       const { movieCode, date } = req.query;
       const currentTime = new Date();
-
       const minDisplayTime = new Date(currentTime.getTime() + 10 * 60 * 1000);
       const schedules = await Schedule.find({
         date: date,
