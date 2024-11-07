@@ -1,4 +1,5 @@
 const userController = require("../controllers/userController");
+const upload = require("../middleware/imageUploadMiddleware");
 const router = require("express").Router();
 
 router.post("/signup", userController.signup);
@@ -17,13 +18,13 @@ router.get(
   "/getAllStaffPermissionRequest",
   userController.getAllStaffPermissionRequest
 );
+router.patch("/:code", userController.delete);
 
-router.put("/:code", userController.update);
 router.put(
   "/updatePermissionRequest/:code",
   userController.updatePermissionRequest
 );
 
-router.patch("/:code", userController.delete);
+router.put("/:code", upload.single("image"), userController.update);
 
 module.exports = router;
