@@ -25,12 +25,10 @@ const salesInvoiceController = {
       }).sort({ salesInvoiceId: -1 });
 
       let newCode = `HDB${formattedDate}-01`; // Mã mặc định nếu không có hóa đơn nào
-      console.log(lastInvoice);
 
       if (lastInvoice) {
         // Tách mã hóa đơn để lấy số
         const lastCodeNumber = parseInt(lastInvoice.code.substring(14)); // Lấy phần cuối cùng
-        console.log(lastCodeNumber);
 
         // Tăng số lên 1
         const nextCodeNumber = lastCodeNumber + 1;
@@ -222,7 +220,30 @@ const salesInvoiceController = {
 
   getAll: async (req, res) => {
     try {
-      const invoices = await SalesInvoice.find()
+      const pageSize = 10;
+      const page = parseInt(req.query.page) || 1;
+      const skip = (page - 1) * pageSize;
+      const filter = {};
+      if (req.query.invoiceCode) {
+        filter.code = req.query.invoiceCode;
+      } else if (req.query.staffCode) {
+        filter.staffCode = req.query.staffCode;
+      } else if (req.query.status) {
+        filter.status = req.query.status;
+      } else if (req.query.fromDate && req.query.toDate) {
+        const startDate = new Date(req.query.fromDate);
+        const endDate = new Date(req.query.toDate);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+
+        filter.createdAt = {
+          $gte: startDate,
+          $lte: endDate,
+        };
+      }
+
+      let invoices = await SalesInvoice.find(filter)
+        .sort({ createdAt: -1 })
         .populate({
           path: "scheduleCode",
           foreignField: "code",
@@ -258,17 +279,44 @@ const salesInvoiceController = {
           path: "staffCode",
           select: "name phone",
           foreignField: "code",
-        });
+        })
+        .lean();
 
+      if (req.query.movieCode) {
+        invoices = invoices.filter((invoice) => {
+          const movieCode = invoice.scheduleCode.movieCode;
+          return movieCode && movieCode.code === req.query.movieCode;
+        });
+      }
+      if (req.query.customerCode) {
+        invoices = invoices.filter((invoice) => {
+          const phone = invoice.customerCode
+            ? invoice.customerCode.phone
+            : null;
+          return phone && phone === req.query.customerCode;
+        });
+      }
+      if (req.query.cinemaCode) {
+        invoices = invoices.filter((invoice) => {
+          const cinemaCode = invoice.scheduleCode.roomCode.cinemaCode.code;
+          return cinemaCode && cinemaCode === req.query.cinemaCode;
+        });
+      }
+      const totalInvoices = invoices.length;
+      const totalPages = Math.ceil(totalInvoices / pageSize);
+
+      const paginatedInvoices = invoices.slice(skip, skip + pageSize);
       const result = await Promise.all(
-        invoices.map(async (invoice) => {
+        paginatedInvoices.map(async (invoice) => {
           const details = await SalesInvoiceDetail.find({
             salesInvoiceCode: invoice.code,
-          }).populate({
-            path: "productCode",
-            select: "name seatNumber type description",
-            foreignField: "code",
-          });
+          })
+            .populate({
+              path: "productCode",
+              select: "name seatNumber type description",
+              foreignField: "code",
+            })
+            .lean();
           const promotionResults = await PromotionResult.findOne({
             salesInvoiceCode: invoice.code,
           });
@@ -276,14 +324,18 @@ const salesInvoiceController = {
             ? promotionResults.discountAmount
             : 0;
           return {
-            ...invoice.toObject(),
+            ...invoice,
             details,
             discountAmount: discountAmount,
           };
         })
       );
 
-      res.status(200).json(result);
+      res.status(200).json({
+        items: result,
+        totalPages: totalPages,
+        currentPage: page,
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: "Server error", error: error.message });
