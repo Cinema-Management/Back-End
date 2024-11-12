@@ -10,6 +10,7 @@ const SalesInvoice = require("../models/SalesInvoice");
 const SalesInvoiceDetail = require("../models/SalesInvoiceDetail");
 const { get } = require("mongoose");
 const PromotionResult = require("../models/PromotionResult");
+const SeatStatusInSchedule = require("../models/SeatStatusInSchedule");
 
 const returnInvoiceController = {
   add: async (req, res) => {
@@ -251,6 +252,15 @@ const returnInvoiceController = {
         details.map(async (detail, index) => {
           const newInvoiceNumber = invoiceCountDetail + index + 1;
           const code = `CTHDT${formattedDate}-${newInvoiceNumber}`;
+
+          const seatStatus = await SeatStatusInSchedule.findOne({
+            scheduleCode: scheduleCode,
+            productCode: detail.productCode,
+          });
+        if (seatStatus) {
+          seatStatus.status = 1;
+          await seatStatus.save();
+        }
           return {
             code,
             returnInvoiceCode: returnInvoice.code,
@@ -259,7 +269,7 @@ const returnInvoiceController = {
             quantity: detail.quantity,
             totalAmount: detail.totalAmount,
             returnReason,
-          };
+          };   
         })
       );
       const promotionResult = await PromotionResult.findOne({

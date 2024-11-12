@@ -127,8 +127,8 @@ router.post("/payment", async (req, res) => {
     app_time: Date.now(), // miliseconds
     item: JSON.stringify(items),
     embed_data: JSON.stringify(embed_data),
-    amount: 1,
-    description: `TD Cinema - Thanh toán đơn hàng #${transID}`,
+    amount: amount || 10000,
+    description: `TD Cinemas - Thanh toán đơn hàng #${transID}`,
     bank_code: "zalopayapp",
     callback_url: `${process.env.URL_CALLBACK}/api/callback`,
   };

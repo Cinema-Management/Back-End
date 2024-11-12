@@ -2,6 +2,8 @@ const HierarchyValue = require("../models/HierarchyValue");
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const uploadImageS3 = require("./upLoadImageS3Controller");
+const SalesInvoice = require("../models/SalesInvoice");
+const SalesInvoiceDetail = require("../models/SalesInvoiceDetail");
 const buildFullAddress = async (currentCode) => {
   const addressParts = [];
 
@@ -446,7 +448,12 @@ const userController = {
       if (name && name !== existingUser.name) {
         existingUser.name = name;
       }
-      if (birthDate && birthDate !== existingUser.birthDate) {
+      if (
+        birthDate &&
+        birthDate !== existingUser.birthDate &&
+        birthDate !== "" &&
+        birthDate !== null
+      ) {
         existingUser.birthDate = birthDate;
       }
       if (gender && gender !== existingUser.gender) {
@@ -594,6 +601,145 @@ const userController = {
       res.status(500).json({
         error: "Server error while getting staff with permission request",
       });
+    }
+  },
+  checkPhoneOrEmailExist: async (req, res) => {
+    try {
+      const { phone, email, type } = req.body;
+
+      const existingUser = await User.findOne({
+        type: type,
+        $or: [{ phone: phone }, { email: email }],
+      });
+
+      if (existingUser) {
+        if (existingUser.phone === phone) {
+          return res.status(200).send({ phone: true });
+        } else if (existingUser.email === email) {
+          return res.status(200).send({ email: true });
+        }
+      }
+
+      // Nếu không tìm thấy tài khoản với cả phone và email
+      return res.status(200).send({ phone: false, email: false });
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ error: "Server error while checking phone or email exist" });
+    }
+  },
+  spendingForCurrentYear: async (req, res) => {
+    try {
+      const { customerCode } = req.params;
+
+      // Tìm thông tin khách hàng (nếu cần thiết)
+      const customer = await User.findOne({ code: customerCode });
+      if (!customer) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      const currentYear = new Date().getFullYear();
+
+      const result = await SalesInvoice.aggregate([
+        {
+          $match: {
+            customerCode: customerCode,
+            status: 1,
+            createdAt: {
+              $gte: new Date(`${currentYear}-01-01T00:00:00Z`),
+              $lt: new Date(`${currentYear + 1}-01-01T00:00:00Z`),
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: "sales_invoice_details",
+            localField: "code",
+            foreignField: "salesInvoiceCode",
+            as: "invoiceDetails",
+          },
+        },
+        {
+          $unwind: "$invoiceDetails",
+        },
+        {
+          $group: {
+            _id: "$code",
+            totalDetailsAmount: { $sum: "$invoiceDetails.totalAmount" }, // Tổng tất cả chi tiết hóa đơn cho từng hóa đơn
+          },
+        },
+        {
+          $lookup: {
+            from: "promotion_results",
+            localField: "_id", // Mã hóa đơn
+            foreignField: "salesInvoiceCode",
+            as: "promotionResults",
+          },
+        },
+        {
+          $unwind: {
+            path: "$promotionResults",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            totalDetailsAmount: 1,
+            discountAmount: {
+              $ifNull: ["$promotionResults.discountAmount", 0], // Giảm giá nếu có, nếu không mặc định là 0
+            },
+          },
+        },
+        {
+          $project: {
+            adjustedAmount: {
+              $subtract: ["$totalDetailsAmount", "$discountAmount"],
+            }, // Tổng chi tiết hóa đơn sau khi trừ giảm giá
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalAmount: { $sum: "$adjustedAmount" }, // Tổng tất cả các hóa đơn sau khi đã trừ giảm giá
+          },
+        },
+      ]);
+
+      if (result.length === 0) {
+        return res.status(200).json({ totalAmount: 0 });
+      }
+
+      return res.status(200).json({ totalAmount: result[0].totalAmount });
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ error: "Server error while calculating total amount" });
+    }
+  },
+
+  checkUserForSalesInvoice: async (req, res) => {
+    try {
+      const { code } = req.params; // Lấy mã khách hàng từ params
+
+      // Tìm thông tin khách hàng
+      const customer = await User.findOne({
+        code: code,
+      });
+      if (!customer) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const salesInvoice = await SalesInvoice.findOne({
+        $or: [{ customerCode: code }, { staffCode: code }],
+      });
+      if (!salesInvoice) {
+        return res.status(200).send(false);
+      } else {
+        return res.status(200).json(true);
+      }
+    } catch (error) {
+      return res
+        .status(500)
+        .json({ error: "Server error while checking user" });
     }
   },
 };
