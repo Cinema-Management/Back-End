@@ -3,6 +3,7 @@ const PriceDetail = require("../models/PriceDetail");
 const ProductType = require("../models/ProductType");
 const RoomType = require("../models/RoomType");
 const Product = require("../models/Product");
+const SalesInvoiceDetail = require("../models/SalesInvoiceDetail");
 
 const priceController = {
   add: async (req, res) => {
@@ -224,7 +225,7 @@ const priceController = {
         if (endDate && endDate !== price.endDate) {
           price.endDate = endDateNew;
         }
-        if (status && status !== price.status) {
+        if (status && status !== price.status && status !== null && status !== undefined && status !== "") {
           price.status = status;
         }
         if (type && type !== price.type) {
@@ -899,6 +900,36 @@ const priceController = {
         .send({ message: "Đã sao chép bảng giá và chi tiết giá thành công." });
     } catch (error) {
       console.error("Lỗi:", error);
+      return res.status(500).send({ message: error.message });
+    }
+  },
+
+  checkPriceDetailForSaleInvoice: async (req, res) => {
+    try {
+      const { priceCode } = req.params;
+
+      // Tìm tất cả promotionDetail có promotionLineCode tương ứng
+      const priceDetail = await PriceDetail.find({
+        priceCode: priceCode,
+      });
+
+      // Kiểm tra nếu bất kỳ promotionDetail nào có mã tồn tại trong PromotionResult
+      const hasPromotionResult = await Promise.all(
+        priceDetail.map(async (detail) => {
+          const salesInvoiceDetail = await SalesInvoiceDetail.findOne({
+            priceDetailCode: detail.code,
+          });
+          return salesInvoiceDetail ? true : false;
+        })
+      );
+
+      // Nếu có bất kỳ giá trị nào là true, trả về true; nếu không, trả về false
+      if (hasPromotionResult.some((result) => result === true)) {
+        return res.status(200).send(true);
+      }
+
+      return res.status(200).send(false);
+    } catch (error) {
       return res.status(500).send({ message: error.message });
     }
   },

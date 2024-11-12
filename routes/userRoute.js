@@ -11,13 +11,22 @@ router.post("/addStaff", userController.addStaff);
 router.post("/addCustomer", userController.addCustomer);
 
 router.post("/checkUserStatusByPhone", userController.checkUserStatusByPhone);
-
+router.post("/checkPhoneOrEmailExist", userController.checkPhoneOrEmailExist);
 router.get("/", userController.getAllUser);
 router.get("/staff", userController.getAllStaff);
 router.get(
   "/getAllStaffPermissionRequest",
   userController.getAllStaffPermissionRequest
 );
+router.get(
+  "/spendingForCurrentYear/:customerCode",
+  userController.spendingForCurrentYear
+);
+router.get(
+  "/checkUserForSalesInvoice/:code",
+  userController.checkUserForSalesInvoice
+);
+
 router.patch("/:code", userController.delete);
 
 router.put(
