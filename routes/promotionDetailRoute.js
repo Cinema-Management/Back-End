@@ -10,6 +10,10 @@ router.get(
   "/getPromotionDetailsByDateAndStatus",
   promotionDetailController.getPromotionDetailsByDateAndStatus
 );
+router.get(
+  "/checkPromotionInPromotionResult/:promotionLineCode",
+  promotionDetailController.checkPromotionDetailInPromotionResult
+);
 
 router.post("/", promotionDetailController.add);
 router.put("/:code", promotionDetailController.update);

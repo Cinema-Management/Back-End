@@ -29,48 +29,6 @@ const promotionLineController = {
         });
       }
 
-      // Kiểm tra xem khoảng thời gian của dòng khuyến mãi có nằm trong hoặc bằng thời gian của chương trình khuyến mãi hay không
-      if (
-        startDate < new Date(promotion.startDate) ||
-        endDate > new Date(promotion.endDate)
-      ) {
-        return res.status(400).send({
-          message: `The promotion line's start and end dates must be within or equal to the promotion's date range from ${promotion.startDate
-            .toISOString()
-            .substring(0, 10)} to ${promotion.endDate
-            .toISOString()
-            .substring(0, 10)}`,
-        });
-      }
-
-      // Kiểm tra chồng chéo ngày với các dòng khuyến mãi khác
-      const overlappingPromotionLine = await PromotionLine.findOne({
-        promotionCode,
-        type,
-        $or: [
-          {
-            // Điều kiện 1: Ngày bắt đầu của dòng khuyến mãi mới nằm trong khoảng thời gian của dòng khuyến mãi đã tồn tại
-            startDate: { $lt: endDate },
-            endDate: { $gt: startDate },
-          },
-          {
-            // Điều kiện 2: Ngày bắt đầu của dòng khuyến mãi hiện có nằm trong khoảng thời gian của dòng khuyến mãi mới
-            startDate: { $gt: startDate },
-            endDate: { $lt: endDate },
-          },
-        ],
-      });
-
-      if (overlappingPromotionLine) {
-        return res.status(400).send({
-          message: `There is already a promotion line in the same date range from ${overlappingPromotionLine.startDate
-            .toISOString()
-            .substring(0, 10)} to ${overlappingPromotionLine.endDate
-            .toISOString()
-            .substring(0, 10)}`,
-        });
-      }
-
       // Tạo mã cho dòng khuyến mãi mới
       // Tạo prefix dựa trên loại khuyến mãi
       let prefix;
@@ -169,54 +127,6 @@ const promotionLineController = {
       }
 
       // Kiểm tra xem khoảng thời gian của dòng khuyến mãi có nằm trong hoặc bằng thời gian của chương trình khuyến mãi hay không
-      const promotion = await Promotion.findOne({
-        code: promotionLine?.promotionCode,
-      });
-      if (!promotion) {
-        return res.status(404).send({ message: "Promotion not found" });
-      }
-
-      if (
-        startDate < new Date(promotion.startDate) ||
-        endDate > new Date(promotion.endDate)
-      ) {
-        return res.status(400).send({
-          message: `The promotion line's start and end dates must be within or equal to the promotion's date range from ${promotion.startDate
-            .toISOString()
-            .substring(0, 10)} to ${promotion.endDate
-            .toISOString()
-            .substring(0, 10)}`,
-        });
-      }
-
-      // Kiểm tra chồng chéo ngày với các dòng khuyến mãi khác (ngoại trừ dòng đang cập nhật)
-      const overlappingPromotionLine = await PromotionLine.findOne({
-        promotionCode: promotionLine?.promotionCode,
-        type,
-        code: { $ne: code }, // Loại trừ dòng hiện tại
-        $or: [
-          {
-            // Điều kiện 1: Ngày bắt đầu của dòng khuyến mãi mới nằm trong khoảng thời gian của dòng khuyến mãi đã tồn tại
-            startDate: { $lt: endDate },
-            endDate: { $gt: startDate },
-          },
-          {
-            // Điều kiện 2: Ngày bắt đầu của dòng khuyến mãi hiện có nằm trong khoảng thời gian của dòng khuyến mãi mới
-            startDate: { $gt: startDate },
-            endDate: { $lt: endDate },
-          },
-        ],
-      });
-
-      if (overlappingPromotionLine) {
-        return res.status(400).send({
-          message: `There is already a promotion line in the same date range from ${overlappingPromotionLine.startDate
-            .toISOString()
-            .substring(0, 10)} to ${overlappingPromotionLine.endDate
-            .toISOString()
-            .substring(0, 10)}`,
-        });
-      }
 
       // Cập nhật các trường thông tin của dòng khuyến mãi
       promotionLine.description = description;

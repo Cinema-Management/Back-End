@@ -2,6 +2,9 @@ const Product = require("../models/Product");
 const Promotion = require("../models/Promotion");
 const PromotionDetail = require("../models/PromotionDetail ");
 const PromotionLine = require("../models/PromotionLine");
+const PromotionResult = require("../models/PromotionResult");
+const SalesInvoiceDetail = require("../models/SalesInvoiceDetail");
+
 const promotionDetailController = {
   getAll: async (req, res) => {
     try {
@@ -391,6 +394,35 @@ const promotionDetailController = {
     } catch (error) {
       console.error("Error fetching promotion details:", error);
       return res.status(500).json({ message: "Internal server error." });
+    }
+  },
+  checkPromotionDetailInPromotionResult: async (req, res) => {
+    try {
+      const { promotionLineCode } = req.params;
+
+      // Tìm tất cả promotionDetail có promotionLineCode tương ứng
+      const promotionDetails = await PromotionDetail.find({
+        promotionLineCode: promotionLineCode,
+      });
+
+      // Kiểm tra nếu bất kỳ promotionDetail nào có mã tồn tại trong PromotionResult
+      const hasPromotionResult = await Promise.all(
+        promotionDetails.map(async (detail) => {
+          const promotionResult = await PromotionResult.findOne({
+            promotionDetailCode: detail.code,
+          });
+          return promotionResult ? true : false;
+        })
+      );
+
+      // Nếu có bất kỳ giá trị nào là true, trả về true; nếu không, trả về false
+      if (hasPromotionResult.some((result) => result === true)) {
+        return res.status(200).send(true);
+      }
+
+      return res.status(200).send(false);
+    } catch (error) {
+      return res.status(500).send({ message: error.message });
     }
   },
 };
