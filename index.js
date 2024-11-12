@@ -34,6 +34,7 @@ const promotionResultRoute = require("./routes/promotionResultRoute");
 const locationRoute = require("./routes/locationRoute");
 const paymentAppRoute = require("./routes/paymentAppRoute");
 const paymentWebRoute = require("./routes/paymentWebRoute");
+const statisticRoute = require("./routes/statisticRoute");
 const cookieParser = require("cookie-parser");
 
 const IP = process.env.IP;
@@ -86,8 +87,7 @@ app.use("/api/promotion-results", promotionResultRoute);
 app.use("/api/locations", locationRoute);
 app.use("/api/app", paymentAppRoute);
 app.use("/api/web", paymentWebRoute);
-
-
+app.use("/api/statistics", statisticRoute);
 
 app.get("/", (req, res) => {
   return res.send("Hello World tùng nè");
