@@ -130,7 +130,7 @@ router.post("/payment", async (req, res) => {
     // expire_duration_seconds: expire_duration_seconds,
     embed_data: JSON.stringify(embed_data),
     amount: amount || 10000,
-    description: `TD Cinema - Thanh toán đơn hàng #${transID}`,
+    description: `TD Cinemas - Thanh toán đơn hàng #${transID}`,
     bank_code: "zalopayapp",
     callback_url: `${process.env.URL_CALLBACK}/api/callback`,
   };

@@ -14,6 +14,7 @@ router.get("/getPrice", priceController.getPriceDetails);
 router.get("/getPriceDetailsFood", priceController.getPriceDetailsFood);
 router.get("/getAllPriceFood", priceController.getAllPriceFood);
 router.get("/", priceController.getAll);
+router.get("/checkPriceDetailForSaleInvoice/:priceCode", priceController.checkPriceDetailForSaleInvoice);
 router.delete("/delete", priceController.deleteAll);
 router.delete("/deleteDetail", priceController.deleteAllDetail);
 router.delete("/deletePrice/:code", priceController.deletePrice);
