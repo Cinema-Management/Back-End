@@ -9,6 +9,10 @@ const Cinema = require("../models/Cinema");
 const { get } = require("mongoose");
 const PromotionResult = require("../models/PromotionResult");
 const PriceDetail = require("../models/PriceDetail");
+const HierarchyValue = require("../models/HierarchyValue");
+const ReturnInvoice = require("../models/ReturnInvoice");
+const ReturnInvoiceDetail = require("../models/ReturnInvoiceDetail");
+const Product = require("../models/Product");
 
 const salesInvoiceController = {
   add: async (req, res) => {
@@ -28,7 +32,7 @@ const salesInvoiceController = {
 
       if (lastInvoice) {
         // Tách mã hóa đơn để lấy số
-        const lastCodeNumber = parseInt(lastInvoice.code.substring(14)); // Lấy phần cuối cùng
+        const lastCodeNumber = parseInt(lastInvoice.code.substring(14));
 
         // Tăng số lên 1
         const nextCodeNumber = lastCodeNumber + 1;
@@ -337,7 +341,6 @@ const salesInvoiceController = {
         currentPage: page,
       });
     } catch (error) {
-      console.error(error);
       res.status(500).json({ message: "Server error", error: error.message });
     }
   },
@@ -468,7 +471,6 @@ const salesInvoiceController = {
 
       res.status(200).json(result);
     } catch (error) {
-      console.error(error);
       res.status(500).json({ message: "Server error", error: error.message });
     }
   },
@@ -501,7 +503,7 @@ const salesInvoiceController = {
 };
 
 const getFormattedTime = (mongoDate) => {
-  const date = new Date(mongoDate); // Chuyển MongoDB date về đối tượng Date JavaScript
+  const date = new Date(mongoDate);
 
   const hours = String(date.getHours()).padStart(2, "0");
   const minutes = String(date.getMinutes()).padStart(2, "0");
@@ -518,5 +520,16 @@ function getFormattedDay(isoString) {
 
   return `${day}/${month}/${year}`;
 }
+const buildFullAddress = async (currentCode, addressParts = []) => {
+  const hierarchy = await HierarchyValue.findOne({ code: currentCode });
 
+  if (!hierarchy) {
+    return addressParts;
+  }
+  addressParts.push(hierarchy.name);
+  if (hierarchy.parentCode) {
+    return await buildFullAddress(hierarchy.parentCode, addressParts);
+  }
+  return addressParts;
+};
 module.exports = salesInvoiceController;
