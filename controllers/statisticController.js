@@ -8,17 +8,13 @@ const Product = require("../models/Product");
 const statisticController = {
   getStatisticsByStaff: async (req, res) => {
     try {
-      const queryParams = [
-        req.query.fromDate,
-        req.query.toDate,
-        req.query.cinemaCode,
-      ];
+      const queryParams = [req.query.fromDate, req.query.toDate];
       const validQueryCount = queryParams.filter((param) => param).length;
 
-      if (validQueryCount < 3) {
+      if (validQueryCount < 2) {
         return res.status(200).json([]);
       }
-      const pageSize = 15;
+      const pageSize = 10;
       const page = parseInt(req.query.page) || 1;
       const skip = (page - 1) * pageSize;
 
@@ -27,7 +23,7 @@ const statisticController = {
       if (req.query.staffCode) {
         filter.staffCode = req.query.staffCode;
       }
-      filter.status = req.query.status || 1;
+      filter.status = 1;
 
       if (req.query.fromDate && req.query.toDate) {
         const startDate = new Date(req.query.fromDate);
@@ -254,14 +250,10 @@ const statisticController = {
   },
   getStatisticsByCustomer: async (req, res) => {
     try {
-      const queryParams = [
-        req.query.fromDate,
-        req.query.toDate,
-        req.query.cinemaCode,
-      ];
+      const queryParams = [req.query.fromDate, req.query.toDate];
       const validQueryCount = queryParams.filter((param) => param).length;
 
-      if (validQueryCount < 3) {
+      if (validQueryCount < 2) {
         return res.status(200).json([]);
       }
 
@@ -273,7 +265,7 @@ const statisticController = {
       if (req.query.customerCode) {
         filter.customerCode = req.query.customerCode;
       }
-      filter.status = req.query.status || 1;
+      filter.status = 1;
 
       if (req.query.fromDate && req.query.toDate) {
         const startDate = new Date(req.query.fromDate).setHours(0, 0, 0, 0);
@@ -449,14 +441,10 @@ const statisticController = {
   },
   getReturnInvoiceDetailsByCinemaCode: async (req, res) => {
     try {
-      const queryParams = [
-        req.query.fromDate,
-        req.query.toDate,
-        req.query.cinemaCode,
-      ];
+      const queryParams = [req.query.fromDate, req.query.toDate];
       const validQueryCount = queryParams.filter((param) => param).length;
 
-      if (validQueryCount < 3) {
+      if (validQueryCount < 2) {
         return res.status(200).json([]);
       }
       const pageSize = 10;
@@ -563,22 +551,21 @@ const statisticController = {
   },
   getPromotionResult: async (req, res) => {
     try {
-      const { promotionCode, cinemaCode } = req.query;
-      const promotionResults = await PromotionResult.find({
-        status: "1",
-      })
+      const pageSize = 8;
+      const page = parseInt(req.query.page) || 1;
+      const skip = (page - 1) * pageSize;
+      const filter = { status: 1 };
+
+      let promotionResults = await PromotionResult.find(filter)
         .populate({
           path: "promotionDetailCode",
-          model: "PromotionDetail",
           select: "code promotionLineCode",
           foreignField: "code",
-
           populate: {
             path: "promotionLineCode",
             model: "PromotionLine",
             select: "code promotionCode",
             foreignField: "code",
-
             populate: {
               path: "promotionCode",
               model: "Promotion",
@@ -598,13 +585,11 @@ const statisticController = {
           model: "SalesInvoice",
           select: "code schedulesCode",
           foreignField: "code",
-
           populate: {
             path: "scheduleCode",
             model: "Schedule",
             select: "code roomCode",
             foreignField: "code",
-
             populate: {
               path: "roomCode",
               model: "Room",
@@ -614,65 +599,165 @@ const statisticController = {
           },
         });
 
-      // Lọc kết quả theo promotionCode và cinemaCode nếu có
-      let results = promotionResults;
-      if (promotionCode || cinemaCode) {
-        results = promotionResults.filter((item) => {
-          const promotionMatch =
-            !promotionCode ||
-            item.promotionDetailCode.promotionLineCode.promotionCode.code ===
-              promotionCode;
-          const cinemaMatch =
-            !cinemaCode ||
-            item.salesInvoiceCode?.scheduleCode?.roomCode.cinemaCode ===
-              cinemaCode;
-          return promotionMatch && cinemaMatch;
+      if (req.query.promotionCode) {
+        promotionResults = promotionResults.filter((result) => {
+          const promotionDetail = result.promotionDetailCode;
+          const promotionLine = promotionDetail?.promotionLineCode;
+          const promotionCode = promotionLine?.promotionCode;
+          return (
+            promotionCode && promotionCode.code === req.query.promotionCode
+          );
+        });
+      } else if (req.query.fromDate && req.query.toDate) {
+        const startDate = new Date(req.query.fromDate);
+        const endDate = new Date(req.query.toDate);
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(23, 59, 59, 999);
+
+        promotionResults = promotionResults.filter((result) => {
+          const promotionDetail = result.promotionDetailCode;
+          const promotionLine = promotionDetail?.promotionLineCode;
+          const promotionCode = promotionLine?.promotionCode;
+
+          if (promotionCode && promotionCode.startDate) {
+            const promotionStartDate = new Date(promotionCode.startDate);
+            promotionStartDate.setHours(0, 0, 0, 0);
+            return (
+              promotionStartDate >= startDate && promotionStartDate <= endDate
+            );
+          }
+          return false;
         });
       }
+      const groupedResults = promotionResults.reduce(
+        (acc, result) => {
+          const promotionDetail = result.promotionDetailCode;
+          const promotion = promotionDetail.promotionLineCode.promotionCode;
+          const promotionKey = promotion.code;
 
-      // Mapping dữ liệu
-      const mappedResults = results.map((result) => {
-        const promotionDetail = result.promotionDetailCode;
-        const promotion = promotionDetail.promotionLineCode.promotionCode;
-        return {
-          code: result.code,
-          promotionCode: promotion.code,
-          description: promotion.description,
-          startDate: promotion.startDate,
-          endDate: promotion.endDate,
-          productCode: result?.freeProductCode?.code,
-          productName: result?.freeProductCode?.name,
-          quantity: result?.freeQuantity,
-          discountAmount: result.discountAmount,
-          cinemaCode:
-            result.salesInvoiceCode?.scheduleCode?.roomCode.cinemaCode,
-        };
+          if (!acc.promotions[promotionKey]) {
+            acc.promotions[promotionKey] = {
+              promotionCode: promotion.code,
+              description: promotion.description,
+              startDate: promotion.startDate,
+              endDate: promotion.endDate,
+              totalDiscountAmount: 0,
+              totalQuantity: 0,
+              totalProductGifts: {},
+            };
+          }
+
+          if (result.discountAmount) {
+            acc.promotions[promotionKey].totalDiscountAmount +=
+              result.discountAmount;
+            acc.overallTotalDiscountAmount += result.discountAmount;
+          }
+
+          if (result.freeProductCode) {
+            const productCode = result.freeProductCode.code;
+            const productName = result.freeProductCode.name;
+            const quantity = result.freeQuantity || 0;
+
+            if (!acc.promotions[promotionKey].totalProductGifts[productCode]) {
+              acc.promotions[promotionKey].totalProductGifts[productCode] = {
+                productCode,
+                productName,
+                totalQuantity: 0,
+              };
+            }
+
+            acc.promotions[promotionKey].totalProductGifts[
+              productCode
+            ].totalQuantity += quantity;
+            acc.promotions[promotionKey].totalQuantity += quantity;
+            acc.overallTotalQuantity += quantity;
+          }
+
+          return acc;
+        },
+        {
+          promotions: {},
+          overallTotalDiscountAmount: 0,
+          overallTotalQuantity: 0,
+        }
+      );
+
+      // Chuyển đổi groupedResults thành định dạng mong muốn và phân trang
+      const mappedPromotions = Object.values(groupedResults.promotions).map(
+        (promo) => {
+          const products = Object.values(promo.totalProductGifts).map(
+            (product) => ({
+              productCode: product.productCode,
+              productName: product.productName,
+              totalQuantity: product.totalQuantity,
+            })
+          );
+
+          products.push({ totalDiscountAmount: promo.totalDiscountAmount });
+
+          return {
+            promotionCode: promo.promotionCode,
+            description: promo.description,
+            startDate: promo.startDate,
+            endDate: promo.endDate,
+            totalDiscountAmount: promo.totalDiscountAmount,
+            totalQuantity: promo.totalQuantity,
+            products,
+          };
+        }
+      );
+
+      const totalPromotions = mappedPromotions.length;
+      const totalPages = Math.ceil(totalPromotions / pageSize);
+      const paginatedPromotions =
+        req.query.isExportAllData === "true"
+          ? mappedPromotions
+          : mappedPromotions.slice(skip, skip + pageSize);
+
+      return res.status(200).send({
+        promotions: paginatedPromotions,
+        overallTotalDiscountAmount: groupedResults.overallTotalDiscountAmount,
+        overallTotalQuantity: groupedResults.overallTotalQuantity,
+        page,
+        totalPages,
       });
-
-      return res.status(200).send(mappedResults);
     } catch (error) {
       return res.status(500).send({ message: error.message });
     }
   },
+
   getTotalByMovie: async (req, res) => {
     try {
-      const salesInvoiceDetails = await SalesInvoiceDetail.find({})
+      const pageSize = 15;
+      const page = parseInt(req.query.page) || 1;
+      const skip = (page - 1) * pageSize;
+      let salesInvoiceDetails = await SalesInvoiceDetail.find()
         .populate({
           path: "salesInvoiceCode",
-          model: "SalesInvoice",
-          select: "code status",
+          select: "code status scheduleCode",
           match: { status: 1 },
           foreignField: "code",
           populate: {
             path: "scheduleCode",
-            model: "Schedule",
+            select: "code movieCode roomCode",
             foreignField: "code",
-            populate: {
-              path: "movieCode",
-              model: "Movie",
-              select: "code name",
-              foreignField: "code",
-            },
+            populate: [
+              {
+                path: "movieCode",
+                select: "code name",
+                foreignField: "code",
+              },
+              {
+                path: "roomCode",
+                select: "cinemaCode name",
+                foreignField: "code",
+                populate: {
+                  path: "cinemaCode",
+                  select: "code name",
+                  foreignField: "code",
+                },
+              },
+            ],
           },
         })
         .populate({
@@ -681,18 +766,32 @@ const statisticController = {
           select: "code name type",
           match: { type: 0 },
           foreignField: "code",
+        })
+        .lean();
+      if (req.query.movieCode) {
+        salesInvoiceDetails = salesInvoiceDetails.filter((detail) => {
+          const movieCode =
+            detail.salesInvoiceCode?.scheduleCode?.movieCode?.code;
+          return movieCode && movieCode === req.query.movieCode;
         });
+      }
 
-      // Lọc ra các chi tiết hóa đơn có cả salesInvoiceCode và productCode hợp lệ
+      if (req.query.cinemaCode) {
+        salesInvoiceDetails = salesInvoiceDetails.filter((detail) => {
+          const cinemaCode =
+            detail.salesInvoiceCode?.scheduleCode?.roomCode?.cinemaCode?.code;
+          return cinemaCode && cinemaCode === req.query.cinemaCode;
+        });
+      }
+
       const filteredDetails = salesInvoiceDetails.filter(
         (detail) => detail.salesInvoiceCode && detail.productCode
       );
 
-      // Nhóm và tính tổng doanh số theo movieCode.code bằng cách sử dụng totalAmount
       const totalByMovie = filteredDetails.reduce((acc, detail) => {
         const movieCode = detail.salesInvoiceCode.scheduleCode.movieCode.code;
-        const totalAmount = detail.totalAmount; // Sử dụng totalAmount từ chi tiết hóa đơn
-        const quantity = detail.quantity; // Số lượng sản phẩm
+        const totalAmount = detail.totalAmount;
+        const quantity = detail.quantity;
 
         if (!acc[movieCode]) {
           acc[movieCode] = {
@@ -702,6 +801,7 @@ const statisticController = {
             totalQuantity: 0,
           };
         }
+
         acc[movieCode].totalRevenue += totalAmount;
         acc[movieCode].totalQuantity += quantity;
 
@@ -712,7 +812,19 @@ const statisticController = {
         (a, b) => b.totalRevenue - a.totalRevenue
       );
 
-      return res.status(200).send(result);
+      const paginatedResult =
+        req.query.isExportAllData === "true"
+          ? result
+          : result.slice(skip, skip + pageSize);
+
+      const totalPages = Math.ceil(result.length / pageSize);
+
+      return res.status(200).send({
+        data: paginatedResult,
+        totalPages: totalPages,
+        currentPage: page,
+        totalResults: result.length,
+      });
     } catch (error) {
       return res.status(500).send({ message: error.message });
     }
