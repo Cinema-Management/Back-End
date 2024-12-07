@@ -36,7 +36,7 @@ const paymentAppRoute = require("./routes/paymentAppRoute");
 const paymentWebRoute = require("./routes/paymentWebRoute");
 const statisticRoute = require("./routes/statisticRoute");
 const cookieParser = require("cookie-parser");
-
+const {getWiFiIPv4Address} = require("./config/ipv4config");
 const IP = process.env.IP;
 const http = require("http");
 const server = http.createServer(app);
@@ -101,4 +101,6 @@ server.listen(PORT, IP, () => {
   console.log("Server is running on IP: " + IP);
   console.log("Server is running on PORT: " + PORT);
   console.log("Server is running on DB: " + mongodb);
+  console.log("Your IPv4 address wifi is:", getWiFiIPv4Address());
+
 });
