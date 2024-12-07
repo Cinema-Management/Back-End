@@ -26,7 +26,6 @@ const promotionCOntroller = {
       const overlappingPromotion = await Promotion.findOne({
         $or: [
           {
-            // Điều kiện 1: Khuyến mãi mới bắt đầu trước khi một khuyến mãi đã tồn tại kết thúc và kết thúc sau khi khuyến mãi đã tồn tại bắt đầu
             startDate: { $lte: endDate },
             endDate: { $gte: startDate },
           },
@@ -44,14 +43,24 @@ const promotionCOntroller = {
       }
 
       // Tạo mã khuyến mãi mới
-
-      // Định dạng mã theo kiểu "KMYYYY-MM-DD"
       const today = new Date(startDate);
       const year = today.getFullYear();
-      const month = (today.getMonth() + 1).toString().padStart(2, "0"); // Tháng 2 chữ số
-      const day = today.getDate().toString().padStart(2, "0"); // Ngày 2 chữ số
-      const newCode = `KM${year}-${month}-${day}`;
+      const month = (today.getMonth() + 1).toString().padStart(2, "0");
+      const day = today.getDate().toString().padStart(2, "0");
+      let newCode = `KM${year}-${month}-${day}`;
 
+      // Kiểm tra mã đã tồn tại và tăng số phụ
+      let promotionExists = await Promotion.findOne({ code: newCode });
+      let suffix = 1;
+
+      // Nếu mã đã tồn tại, thêm số phụ và kiểm tra lại
+      while (promotionExists) {
+        newCode = `KM${year}-${month}-${day}-${suffix}`;
+        promotionExists = await Promotion.findOne({ code: newCode });
+        suffix++;
+      }
+
+      // Tạo mới chương trình khuyến mãi
       const promotion = new Promotion({
         code: newCode,
         description,
