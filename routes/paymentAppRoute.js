@@ -4,6 +4,7 @@ const router = require("express").Router();
 const qs = require("qs");
 const CryptoJS = require("crypto-js"); // npm install crypto-js
 const moment = require("moment"); // npm install moment
+const {getWiFiIPv4Address} = require("../config/ipv4config");
 const config = {
   app_id: "2553",
   key1: "PcY4iZIKFCIdgZvA6ueMcMHHUbRLYjPL",
@@ -16,7 +17,7 @@ router.post("/payment", async (req, res) => {
   // const { expire_duration_seconds } = req.body;
   const { amount } = req.body;
   const embed_data = {
-    redirecturl: process.env.URL_EXPO,
+    redirecturl: `exp://${getWiFiIPv4Address()}:8081`,
   };
 
   const items = [{}]; // Cần điền thông tin ghế hoặc sản phẩm thực tế
