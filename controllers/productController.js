@@ -123,8 +123,8 @@ const productController = {
   getAllSeatsByRoomCode: async (req, res) => {
     try {
       const { roomCode } = req.params; // Nhận mã phòng từ params
+      const currentTime = new Date(); // Lấy thời gian hiện tại
 
-      // Tìm tất cả sản phẩm theo mã roomCode và type đại diện cho ghế ngồi (giả sử type = 0 là ghế)
       const productsWithStatus = await Product.aggregate([
         {
           // Bước 1: Lọc sản phẩm theo roomCode và type = 0 (ghế)
@@ -143,27 +143,66 @@ const productController = {
           },
         },
         {
-          // Bước 3: Tính toán lại trạng thái của ghế
+          // Bước 3: Kết hợp với bảng Schedule để lấy thông tin lịch chiếu
+          $lookup: {
+            from: "schedules", // Tên bảng Schedule
+            localField: "seatStatus.scheduleCode", // Trường trong SeatStatusInSchedule
+            foreignField: "code", // Trường liên kết trong Schedule
+            as: "scheduleInfo", // Tên trường sau khi kết hợp
+          },
+        },
+        {
+          // Bước 4: Lọc những lịch chiếu có endTime < currentTime
+          $addFields: {
+            seatStatus: {
+              $filter: {
+                input: "$seatStatus",
+                as: "statusItem",
+                cond: {
+                  $anyElementTrue: {
+                    $map: {
+                      input: {
+                        $filter: {
+                          input: "$scheduleInfo",
+                          as: "schedule",
+                          cond: { $gt: ["$$schedule.endTime", currentTime] },
+                        },
+                      },
+                      as: "validSchedule",
+                      in: {
+                        $eq: [
+                          "$$statusItem.scheduleCode",
+                          "$$validSchedule.code",
+                        ],
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          // Bước 5: Tính toán lại trạng thái của ghế
           $project: {
-            code: 1, // Giữ mã sản phẩm
-            name: 1, // Giữ tên sản phẩm
-            seatNumber: 1, // Giữ số ghế
-            image: 1, // Giữ hình ảnh
+            code: 1,
+            name: 1,
+            seatNumber: 1,
+            image: 1,
             status: 1,
             seatStatus: {
               $cond: {
                 if: {
-                  // Kiểm tra xem có bất kỳ status nào khác 1 không
                   $anyElementTrue: {
                     $map: {
-                      input: "$seatStatus", // Mảng seatStatus
+                      input: "$seatStatus",
                       as: "statusItem",
-                      in: { $ne: ["$$statusItem.status", 1] }, // Trả về true nếu khác 1
+                      in: { $ne: ["$$statusItem.status", 1] },
                     },
                   },
                 },
-                then: 1, // Nếu có status nào khác 1, trả về 1 đã có suất chiếu
-                else: 0, // Nếu tất cả đều là 1, trả về 1 chưa có suất chiếu
+                then: 1,
+                else: 0,
               },
             },
           },
