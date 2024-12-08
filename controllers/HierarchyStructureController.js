@@ -33,7 +33,6 @@ const hierarchyStructureController = {
             : `PHANCAP${nextCodeNumber}`; // Nếu số lớn hơn hoặc bằng 10, giữ nguyên
       }
 
-      // Tạo cấu trúc phân cấp mới
       const hierarchyStructure = new HierarchyStructure({
         code: newCode,
         name,
