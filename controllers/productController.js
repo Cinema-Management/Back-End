@@ -805,7 +805,7 @@ const productController = {
       }
 
       // Xóa tất cả các sản phẩm có roomCode tương ứng và status = 0
-      const deletedProducts = await Product.deleteMany({ roomCode: roomCode });
+      const deletedProducts = await Product.delete({ roomCode: roomCode });
 
       return res.status(200).json({
         message: "All products with this roomCode deleted successfully",
