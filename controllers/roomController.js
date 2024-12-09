@@ -3,6 +3,7 @@ const RoomType = require("../models/RoomType");
 const RoomSize = require("../models/RoomSize");
 const Cinema = require("../models/Cinema");
 const Product = require("../models/Product");
+const Schedule = require("../models/Schedule");
 
 const roomController = {
   add: async (req, res) => {
@@ -240,6 +241,61 @@ const roomController = {
       });
     } catch (error) {
       return res.status(500).json({ message: "Error deleting cinema", error });
+    }
+  },
+   checkRoomHasSchedule : async (req, res) => {
+    try {
+      const { roomCode } = req.params; 
+  
+      const schedule = await Schedule.findOne({ roomCode });
+  
+      if (schedule) {
+        return res.status(200).json({
+          message: "This room is linked to at least one schedule",
+          hasSchedule: true,
+        });
+      } else {
+        return res.status(200).json({
+          message: "No schedules found for this room",
+          hasSchedule: false,
+        });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error", error });
+    }
+  },
+  restore: async (req, res) => {
+    try {
+      const { roomCode } = req.params; // Lấy roomCode từ URL
+  
+      // Khôi phục phòng theo mã roomCode
+      const restoredRoom = await Room.restore({ code: roomCode });
+      if (!restoredRoom || restoredRoom.nModified === 0) {
+        return res.status(404).json({
+          message: "Room not found or not deleted",
+        });
+      }
+  
+      // Khôi phục tất cả sản phẩm liên quan đến roomCode
+      const restoredProducts = await Product.restore({ roomCode });
+      if (!restoredProducts || restoredProducts.nModified === 0) {
+        return res.status(404).json({
+          message: "Room restored, but no deleted products found for this roomCode",
+        });
+      }
+  
+      return res.status(200).json({
+        message: "Room and related products restored successfully",
+        data: {
+          restoredRoom,
+          restoredProducts,
+        },
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: "Error restoring room and products",
+        error,
+      });
     }
   },
 };
