@@ -304,7 +304,7 @@ const priceController = {
   },
   deleteAll: async (req, res) => {
     try {
-      await Price.deleteMany({});
+      await Price.delete({});
       return res
         .status(200)
         .send({ message: "All records deleted successfully." });
@@ -314,7 +314,7 @@ const priceController = {
   },
   deleteAllDetail: async (req, res) => {
     try {
-      await PriceDetail.deleteMany({});
+      await PriceDetail.delete({});
       return res
         .status(200)
         .send({ message: "All records deleted successfully." });
@@ -342,7 +342,7 @@ const priceController = {
           });
         }
       }
-      await PriceDetail.deleteMany({
+      await PriceDetail.delete({
         priceCode: priceCode,
       });
 
